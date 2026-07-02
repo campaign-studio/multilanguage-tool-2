@@ -122,8 +122,10 @@ body{background:var(--bg);font-family:var(--sans);font-size:14px;color:var(--tex
 .btn-next:disabled{opacity:.38;cursor:not-allowed;}
 .btn-back{background:none;border:1.5px solid var(--border-s);border-radius:var(--r);padding:9px 18px;font-size:13px;cursor:pointer;color:var(--text2);font-family:var(--sans);transition:background .15s,border-color .15s;}
 .btn-back:hover{background:var(--s2);border-color:var(--wh-navy);color:var(--wh-navy);}
-.btn-go{padding:10px 22px;border-radius:var(--r);background:var(--wh-navy);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;gap:6px;transition:background .15s,box-shadow .15s;}
+.btn-go{padding:10px 22px;border-radius:var(--r);background:var(--wh-navy);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;gap:6px;transition:background .15s,box-shadow .15s,opacity .15s;}
 .btn-go:hover{background:var(--wh-navy2);box-shadow:0 4px 12px rgba(27,19,64,.25);}
+.btn-go:disabled{opacity:.38;cursor:not-allowed;pointer-events:none;}
+.btn-go:disabled:hover{background:var(--wh-navy);box-shadow:none;}
 .btn-next.btn-destructive{background:#b91c1c;}
 .btn-next.btn-destructive:hover{background:#991b1b;box-shadow:0 4px 12px rgba(185,28,28,.25);}
 .frow{display:flex;align-items:center;justify-content:space-between;margin-top:28px;padding-top:20px;border-top:1px solid var(--border);}
@@ -821,6 +823,8 @@ tr:focus-within .row-comment-btn{opacity:1;}
     <span class="logo-name">Multilanguage Tool</span>
     <span class="logo-sep">/</span>
     <span class="logo-sub">Campaign Studio</span>
+    <span class="logo-sep" style="margin-left:6px;">·</span>
+    <span id="appVersionTag" style="font-size:10px;font-weight:600;color:rgba(255,255,255,.55);font-family:var(--mono);letter-spacing:.02em;"></span>
   </div>
   <div id="userBadge" style="display:flex;align-items:center;gap:8px;margin-left:auto;">
     <span id="userBadgeEmail" class="topbar-email"></span>
@@ -1285,6 +1289,17 @@ tr:focus-within .row-comment-btn{opacity:1;}
 
 
 <script>
+/* ═══════════ VERSÃO ═══════════
+   Bump toda vez que subir um novo build no GitHub Pages. Aparece no rodapé
+   da navbar — permite conferir num relance se o F5 pegou o arquivo novo
+   ou se o navegador ainda está mostrando o cache antigo. */
+const APP_VERSION = 'v1.4';
+document.addEventListener('DOMContentLoaded', () => {
+  const tag = document.getElementById('appVersionTag');
+  if(tag) tag.textContent = APP_VERSION;
+  document.title = 'Multilanguage Tool ' + APP_VERSION;
+});
+
 /* ═══════════ AUTH (e-mail/senha, client-side, localStorage) ═══════════
    ATENÇÃO: isto NÃO é seguro de verdade — senhas ficam visíveis no
    navegador (DevTools/localStorage). Serve para controle de acesso
@@ -1372,7 +1387,8 @@ function doLogout() {
 
 async function enterApp(user) {
   document.getElementById('loginOverlay').style.display = 'none';
-  document.getElementById('appBody').style.display = '';
+  // NÃO revelar appBody aqui — a primeira .page.active é a page1 (New Project),
+  // e ela pisca durante os awaits abaixo. O goToDashboard cuida da UI correta.
   document.getElementById('userBadgeEmail').textContent = user.email + (user.role === 'admin' ? ' · Admin' : '');
   if(ghConfigured()) { setSyncDot('on'); sbStartRealtime(); } else { setSyncDot('off'); }
   await sbPullUsers();          // mantém a lista de logins fresca e semeia a DB no primeiro uso
@@ -1994,6 +2010,8 @@ function projRowHtml(p, isOwner) {
 function projCreate() {
   // Leva direto pra Tela 1, onde a pessoa escolhe "New project" (upload) ou "Continue editing".
   // A criação do registro do projeto (nome, dono, trava) passa a acontecer dentro desse fluxo.
+  currentProjectId = null; // ESSENCIAL: sem isso, projSaveOnBuild sobrescreve o último projeto aberto
+  _openedFromDashboard = false;
   enterWizardForProject();
 }
 
@@ -2041,6 +2059,7 @@ function projOpen(id) {
 // acessível pelo botão "Edit an existing project" no Dashboard.
 function goToContinueEditing() {
   resetAll();
+  currentProjectId = null; // ESSENCIAL: sem isso, sobrescreve o último projeto aberto ao salvar
   document.getElementById('dashboardScreen').style.display = 'none';
   document.getElementById('appBody').style.display = '';
   document.getElementById('hdrBar').style.display = 'none';
@@ -2413,6 +2432,7 @@ function resetAll() {
   S.vLang = null;
   _imgPickHtml = null;
   _imgTipShown = false;
+  _openedFromDashboard = false; // reset — só é true quando restoreProjectContent liga
   S.allC = [...COUNTRIES];
 
   // Reset import state
@@ -2864,6 +2884,28 @@ function buildCSV() {
         S.csv.rows.forEach(r => { r.translations[l] = r.translations[l] || ''; });
       }
     });
+
+    // Sincroniza LINHAS DE IMAGEM com o S.selImgs — permite voltar em "Images"
+    // depois do primeiro build e adicionar/remover imagens, sem perder o resto.
+    const existingImgSrcs = new Set(S.csv.rows.filter(r => r.isImg).map(r => r.src));
+    // 1) Remove linhas de imagem cuja seleção foi tirada
+    S.csv.rows = S.csv.rows.filter(r => !r.isImg || S.selImgs.has(r.src));
+    // 2) Adiciona linhas pras imagens selecionadas que ainda não estavam no CSV
+    let idSeed = S.csv.rows.length + 1;
+    S.strings
+      .filter(s => s.isImg && S.selImgs.has(s.src) && !existingImgSrcs.has(s.src))
+      .forEach(s => {
+        S.csv.rows.push({
+          id: 'id' + (idSeed++),
+          src: s.src,
+          display: s.display || s.src,
+          isStyle: false, outerKey: null, openTag: null, closeTag: null,
+          isImg: true, imgTag: s.imgTag || null,
+          isLiquidDefault: false, isLiquidFull: false, liquidToken: null,
+          translations: Object.fromEntries(S.csv.langs.map(l => [l, '']))
+        });
+      });
+
     const origLang = S.allC.find(c=>c.code===S.origin)?.lang||null;
     S.vLang = origLang;
     S.isImport = false;
@@ -2988,6 +3030,7 @@ function projSaveOnBuild(wasImport) {
 // Para na tela de seleção de imagens (3.5), já com as imagens que estavam marcadas.
 function restoreProjectContent(data) {
   resetAll(); // zera TODO o estado global (idiomas customizados, seleção de linha, targets, origin, etc.)
+  _openedFromDashboard = true; // marca que veio do "Open Project" (não é import manual)
               // antes de carregar o novo projeto — sem isso, sobras de uma sessão anterior podem
               // contaminar o projeto que está sendo aberto agora (foi a causa do bug do origin).
   closeCommentPopover(); // garante que não fique um popover de comentário aberto referenciando a linha de outro projeto
@@ -3063,11 +3106,13 @@ function goToEditor() {
   });
   document.getElementById('pageContinue')?.classList.remove('active');
   updateBreadcrumb('edit');
-  // Continue Editing: hide Download HTML, show Download XLSX
-  // New Project: show Download HTML, hide Download XLSX
-  const isImport = !!(IMP.html);
+  // Regra: só esconde o botão "Download HTML" no fluxo de IMPORT MANUAL
+  // (Continue Editing → uploads HTML+CSV do zero). Em projetos abertos do
+  // Dashboard, o botão fica visível — a pessoa pode precisar reexportar o
+  // HTML tageado a qualquer momento durante a edição.
+  const isManualImport = !!(IMP.html) && !_openedFromDashboard;
   const btnHtml = document.getElementById('btnDlHtml');
-  if(btnHtml) btnHtml.style.display = isImport ? 'none' : '';
+  if(btnHtml) btnHtml.style.display = isManualImport ? 'none' : '';
   buildTable();
   renderLbar();
   showViewer();
@@ -3487,6 +3532,7 @@ function updateImgThumbs() {
 }
 
 let _imgPickHtml = null; // cache key — rawHtml reference when pick iframe was last built
+let _openedFromDashboard = false; // true quando o projeto foi aberto do Dashboard (não é import manual)
 
 function refreshViewerImgPick() {
   if(!S.rawHtml) return;
