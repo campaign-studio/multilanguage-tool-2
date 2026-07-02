@@ -3016,6 +3016,27 @@ function restoreProjectContent(data) {
   // Pré-marca como selecionadas as imagens que já estavam nas linhas salvas
   S.selImgs = new Set(S.csv.rows.filter(r => r.isImg).map(r => r.src));
 
+  // O loadImport reconstrói S.strings só a partir do CSV — perdemos qualquer
+  // imagem do HTML que nunca foi selecionada. Aqui, re-escaneamos o HTML e
+  // adicionamos as que faltam, pra que apareçam clicáveis no passo Images.
+  (function reAddMissingImages(){
+    if(!S.rawHtml) return;
+    const already = new Set(S.strings.filter(s => s.isImg).map(s => s.src));
+    const tokens = S.rawHtml.split(/(<[^>]*>|<!--[\s\S]*?-->)/g);
+    let idSeed = S.strings.length + 1;
+    for(const tok of tokens){
+      if(!/^<img[\s>]/i.test(tok)) continue;
+      const srcM = tok.match(/\bsrc=(?:"([^"]*)"|'([^']*)')/i);
+      if(!srcM) continue;
+      const src = (srcM[1] || srcM[2] || '').trim();
+      const isLiquid = src.startsWith('{{') || src.startsWith('{%');
+      if(!src || src.length <= 5 || src.startsWith('data:') || isLiquid) continue;
+      if(already.has(src)) continue;
+      already.add(src);
+      S.strings.push({ src, text: src, isImg: true, imgTag: tok, isStyle: false, outerKey: null, openTag: null, closeTag: null, id: 'imgnew' + (idSeed++) });
+    }
+  })();
+
   if(!data.origin) {
     // Projeto antigo salvo antes da correção do origin — não temos o valor real pra restaurar.
     // Em vez de seguir com origin vazio, pede pra escolher de novo (só dessa vez; o próximo
@@ -3027,13 +3048,11 @@ function restoreProjectContent(data) {
   S.origin = data.origin;
   S.targets = S.targets.filter(c => c !== data.origin);
 
-  if(pendingCommentTarget) {
-    // Veio de uma notificação de comentário — pula direto pro editor, sem parar em Imagens/Confirm.
-    goTo(4);
-    buildAndGo();
-  } else {
-    goTo(3.5); // tela de escolher as imagens
-  }
+  // Ao ABRIR um projeto existente, pula direto pro editor (o passo de Imagens
+  // é útil só na criação). A pessoa ainda pode voltar em "Images" pelo breadcrumb
+  // se quiser mudar a seleção — o estado (S.selImgs, S.strings) já está pronto.
+  goTo(4);
+  buildAndGo();
 }
 
 
