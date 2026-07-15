@@ -254,17 +254,21 @@ body{background:var(--bg);font-family:var(--sans);font-size:14px;color:var(--tex
 .img-viewer .right-col{width:100%!important;min-width:0!important;max-width:100%!important;border-left:none!important;flex:1;}
 .ed-col{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--surface);}
 
-.ph{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:10px;flex-shrink:0;position:relative;z-index:5;box-shadow:0 1px 3px rgba(20,20,40,.03);}
+.ph{min-height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:10px 18px;gap:10px;flex-shrink:0;position:relative;z-index:30;box-shadow:0 1px 3px rgba(20,20,40,.03);}
 .ph-t{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
-.ph-a{display:flex;gap:8px;margin-left:auto;}
+.ph-a{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-left:auto;}
 .tbtn{height:34px;padding:0 15px;border-radius:10px;border:1px solid transparent;background:var(--s2);font-size:12px;font-weight:700;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:6px;font-family:var(--sans);white-space:nowrap;transition:transform .12s,box-shadow .12s,background .12s,color .12s;}
 .tbtn:hover{background:var(--s3);color:var(--text);transform:translateY(-1px);box-shadow:0 4px 10px rgba(20,20,40,.08);}
 .tbtn.html{color:var(--accent);background:var(--acc-bg);}
 .tbtn.html:hover{background:#fbe1e8;box-shadow:0 4px 10px rgba(216,56,94,.16);}
-.tbtn.gallery{color:#6d28d9;background:#f5f3ff;}
-.tbtn.gallery:hover{background:#ece5fd;box-shadow:0 4px 10px rgba(109,40,217,.16);}
 .tbtn.csv{color:var(--green);background:var(--grn-bg);}
 .tbtn.csv:hover{background:#e6f5c4;box-shadow:0 4px 10px rgba(3,64,54,.14);}
+.tbtn.upload{color:#1d4ed8;background:#eff6ff;}
+.tbtn.upload:hover{background:#dbeafe;box-shadow:0 4px 10px rgba(29,78,216,.16);}
+.dl-dropdown-wrap{position:relative;}
+.dl-dropdown-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:170px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(20,20,40,.16);z-index:60;padding:5px;animation:modalIn .12s ease;}
+.dl-dropdown-menu button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:8px 10px;border:none;background:none;border-radius:7px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--sans);}
+.dl-dropdown-menu button:hover{background:var(--s2);color:var(--text);}
 #btnApprove{color:#fff!important;background:linear-gradient(135deg,#6d28d9,#8b5cf6)!important;box-shadow:0 2px 8px rgba(109,40,217,.3);}
 #btnApprove:hover{box-shadow:0 6px 16px rgba(109,40,217,.4);}
 
@@ -461,12 +465,6 @@ td.del button:hover{color:#b52a2a;background:#fdeaea;}
 .dz-error.show{display:flex;}
 .dz-error a{color:#1A56E8;text-decoration:underline;font-weight:600;}
 .dz-error svg{flex-shrink:0;}
-/* CSV multi-upload */
-.csv-drop-zone{border:2px dashed var(--border-s);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .2s;background:var(--s2);margin-top:10px;}
-.csv-drop-zone:hover,.csv-drop-zone.over{border-color:var(--accent);background:var(--acc-bg);}
-.csv-drop-zone svg{color:var(--text3);flex-shrink:0;}
-.csv-drop-zone p{font-size:12px;color:var(--text2);line-height:1.4;margin:0;}
-
 .route-card{transition:box-shadow .15s,transform .12s;}
 .route-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);transform:translateY(-2px);}
 
@@ -592,6 +590,14 @@ td.del button:hover{color:#b52a2a;background:#fdeaea;}
    as duas. Quem ainda não tem acesso começa com um placeholder vazio ("Select role…")
    em vez de já vir marcado como Editor por padrão — a escolha tem que ser explícita. */
 .share-role-select{flex-shrink:0;font-size:12px;font-weight:600;font-family:var(--sans);color:var(--text);border:1px solid var(--border-s);border-radius:8px;padding:7px 10px;background:var(--surface);cursor:pointer;min-width:110px;}
+.dash-folder-select{font-size:13px;font-weight:600;font-family:var(--sans);color:var(--text);border:1px solid var(--border-s);border-radius:9px;padding:9px 12px;background:var(--surface);cursor:pointer;min-width:180px;}
+.dash-folder-manage-btn{background:none;border:1px solid var(--border-s);border-radius:7px;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:12px;flex-shrink:0;}
+.dash-folder-manage-btn:hover{background:var(--s2);color:var(--text);}
+.dash-search-wrap{position:relative;flex:1;min-width:200px;max-width:300px;}
+.dash-search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text3);}
+.dash-search-input{width:100%;box-sizing:border-box;padding:9px 12px 9px 32px;border-radius:9px;border:1px solid var(--border-s);font-size:13px;font-family:var(--sans);color:var(--text);background:var(--surface);}
+.dash-search-input:focus{outline:none;border-color:var(--wh-navy);}
+.dash-folder-active-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text2);background:var(--s2);border-radius:20px;padding:5px 12px;}
 .share-role-select:focus{outline:none;border-color:var(--accent);}
 .share-role-select.placeholder{color:var(--text3);font-weight:500;}
 .share-remove-btn{flex-shrink:0;background:none;border:none;color:var(--text3);font-size:12px;padding:5px 6px;cursor:pointer;border-radius:6px;line-height:1;}
@@ -768,6 +774,9 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
 .av-frame-count{font-size:10px;font-weight:700;color:var(--accent);background:var(--acc-bg);border:1px solid var(--acc-bd);border-radius:10px;padding:2px 8px;}
 .av-frame-viewport{position:relative;background:#fff;border-radius:6px;box-shadow:0 2px 16px rgba(0,0,0,.18);overflow:visible;}
 .av-frame-viewport iframe{border:none;width:100%;display:block;pointer-events:auto;background:#fff;}
+/* Push: sem "cartão" de fundo — só o balão de notificação flutuando, lado a lado por país */
+.av-frame-viewport-bare{background:transparent;box-shadow:none;}
+.av-frame-viewport-bare iframe{background:transparent;}
 
 /* Presença ao vivo estilo Figma: quem está online (avatares empilhados) + cursores
    dos outros aprovadores se movendo em tempo real sobre o canvas. */
@@ -908,10 +917,6 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
         <span id="dashSyncStatus" class="dash-sync"></span>
       </div>
       <div style="display:flex;gap:10px;">
-        <button class="btn-back" id="editExistingBtn" onclick="goToContinueEditing()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Edit an existing project
-        </button>
         <button class="btn-next" id="newProjBtn" style="width:auto;padding:10px 20px;margin-top:0;" onclick="projCreate()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           New project
@@ -923,7 +928,17 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
     <div id="dashTabProjects">
       <div class="dash-section" id="dashFoldersSection" style="display:none;">
         <div class="sec-lbl">Folders</div>
-        <div id="dashFoldersRow" class="folder-row"></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <select id="dashFolderSelect" class="dash-folder-select" onchange="setDashFolderFilter(this.value || null)"></select>
+          <span id="dashFolderManage" style="display:none;gap:6px;">
+            <button class="dash-folder-manage-btn" title="Rename folder" onclick="openRenameFolderModal(_dashFolderFilter)">✎</button>
+            <button class="dash-folder-manage-btn" title="Delete folder" onclick="deleteFolderEverywhere(_dashFolderFilter)">🗑</button>
+          </span>
+          <div class="dash-search-wrap" style="margin-left:auto;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-3.5-3.5"/></svg>
+            <input type="text" id="dashProjectSearch" class="dash-search-input" placeholder="Search projects…" oninput="setDashProjectSearch(this.value)">
+          </div>
+        </div>
       </div>
 
       <div class="dash-section">
@@ -948,6 +963,204 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
       </div>
     </div>
 
+    <!-- ═══ PROJETOS — área separada: um "projeto" aqui agrupa vários itens de conteúdo
+         (e-mail, in-app, push) num único lugar, com uma aba por item no editor. Não mexe
+         em nada da parte de e-mail solto acima — é um tipo de registro à parte (p.kind
+         === 'campaign'), reaproveitando o mesmo array/sync de projetos por baixo. ═══ -->
+    <div class="dash-section" id="campaignsSection" style="margin-top:12px;padding-top:28px;border-top:1px solid var(--border);">
+      <div class="dash-section-head">
+        <div class="sec-lbl" style="margin-bottom:0;">Projetos</div>
+        <button class="btn-next" style="width:auto;padding:8px 16px;margin-top:0;font-size:12px;" onclick="openNewCampaignModal()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><path d="M12 5v14M5 12h14"/></svg>
+          New project
+        </button>
+      </div>
+      <div id="campaignsList" style="display:flex;flex-direction:column;gap:14px;margin-top:12px;"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ Novo Projeto (campanha multi-item) — só pede o nome; itens (e-mail/in-app/push)
+     são adicionados de dentro do editor. ═══ -->
+<div id="newCampaignModal" class="modal-ov" style="display:none;">
+  <div class="card modal-card" style="width:100%;max-width:380px;">
+    <div class="ci" style="padding:28px;">
+      <h1 style="margin:0 0 14px;">New project</h1>
+      <div class="field" style="margin-bottom:0;">
+        <label>Project name</label>
+        <input id="newCampaignNameInput" type="text" placeholder="e.g. Summer Reactivation" onkeydown="if(event.key==='Enter')createCampaign()">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:22px;">
+        <button class="btn-back" style="flex:1;" onclick="closeNewCampaignModal()">Cancel</button>
+        <button class="btn-next" style="flex:1;margin-top:0;" onclick="createCampaign()">Create</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Escolher tipo de item novo (dentro do editor de Projeto) ═══ -->
+<!-- ═══ Content — modal único com 3 abas (Email/In-app/Push): lista o que já tem
+     cadastrado de cada tipo e permite adicionar um novo, tudo num só lugar. ═══ -->
+<div id="manageContentModal" class="modal-ov" style="display:none;">
+  <div class="card modal-card" style="width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="ci" style="padding:28px 28px 0;flex-shrink:0;">
+      <div class="modal-head" style="margin-bottom:14px;">
+        <h1>Content</h1>
+        <button class="btn-back" onclick="closeManageContentModal()" style="padding:4px 10px;">Close</button>
+      </div>
+      <div class="dash-sort" id="manageContentTabs" style="width:100%;">
+        <button class="dash-sort-btn" style="flex:1;" onclick="switchManageContentTab('email')">Email</button>
+        <button class="dash-sort-btn" style="flex:1;" onclick="switchManageContentTab('inapp')">In-app</button>
+        <button class="dash-sort-btn" style="flex:1;" onclick="switchManageContentTab('push')">Push</button>
+      </div>
+    </div>
+    <div style="padding:16px 28px 28px;overflow-y:auto;">
+      <div id="manageContentList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
+      <div id="manageContentAddArea"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Upload de CSV pro item ativo (email/in-app/push) — igual ao "Update from CSV"
+     do editor clássico, só que aplicado ao item da aba aberta no momento. ═══ -->
+<div id="itemCsvModal" class="modal-ov" style="display:none;">
+  <div class="card modal-card" style="width:100%;max-width:400px;">
+    <div class="ci" style="padding:28px;">
+      <h1 style="margin:0 0 6px;">Upload CSV</h1>
+      <p class="sub" id="itemCsvSub" style="margin-bottom:16px;"></p>
+      <input type="file" id="itemCsvInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onItemCsvFile(this.files[0])">
+      <button class="btn-next" onclick="document.getElementById('itemCsvInput').click()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V3m0 0l-4 4m4-4l4 4"/></svg>
+        Select CSV or XLSX
+      </button>
+      <button class="btn-back" style="margin-top:10px;width:100%;" onclick="closeItemCsvModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ EDITOR DE PROJETO (campanha multi-item, abas: email/in-app/push) ═══════════ -->
+<!-- Sem topbar própria: essa tela é um overlay fixed por cima da navbar global (que já
+     tem "Dashboard" pra voltar) — ter uma segunda barra igual aqui só duplicava (e ficava
+     escondida atrás da global, já que empatam em z-index e a global vem depois no DOM). -->
+<div id="campaignScreen" style="display:none;position:fixed;inset:48px 0 0 0;background:var(--bg);z-index:600;flex-direction:column;">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;">
+    <button class="tbtn" style="height:28px;padding:0 10px;flex-shrink:0;" onclick="goToDashboard()" title="Back to Dashboard">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <span id="campaignScreenTitle" style="font-size:13px;font-weight:700;color:var(--text);flex-shrink:0;margin-right:8px;">Project</span>
+    <div id="campaignTabs" style="display:flex;gap:6px;flex:1;"></div>
+    <button class="tbtn" style="border-color:#c4b5fd;color:#6d28d9;background:#f5f3ff;font-weight:600;flex-shrink:0;" onclick="openCampaignBulkApprovalView()" title="Approve every language of every asset in this tab">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+      Approve all copies
+    </button>
+    <button class="dash-sort-btn" style="background:var(--s2);flex-shrink:0;" onclick="openManageContentModal()" title="Add content">+ Add content</button>
+  </div>
+  <div id="campaignItemEmpty" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--text3);">
+    <p style="font-size:13px;">No content yet — click "+ Add content" to add an email, in-app message, or push.</p>
+  </div>
+  <!-- Galeria: landing da aba ativa — mostra TODOS os assets daquele tipo já com
+       preview + Edit/Approve copies em cima de cada um, sem precisar abrir nada. -->
+  <div id="campaignGallery" style="flex:1;display:none;overflow:auto;padding:24px;">
+    <div id="campaignGalleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;max-width:1400px;margin:0 auto;"></div>
+  </div>
+  <div id="campaignItemBody" style="flex:1;display:none;overflow:hidden;">
+    <div style="display:flex;height:100%;">
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);">
+        <div class="ph">
+          <button class="tbtn" style="height:28px;padding:0 10px;margin-right:8px;" onclick="backToCampaignGallery()" title="Back to gallery">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="ph-t" id="campaignItemLabel">Item</span>
+          <div class="ph-a">
+            <button class="tbtn" style="border-color:#c4b5fd;color:#6d28d9;background:#f5f3ff;font-weight:600;" onclick="openCampaignApprovalView()">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+              Approve copies
+            </button>
+            <button class="tbtn upload" onclick="openItemCsvModal()">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V3m0 0l-4 4m4-4l4 4"/></svg>
+              Upload CSV
+            </button>
+            <button class="tbtn csv" onclick="dlItemCSV()">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Download CSV
+            </button>
+          </div>
+        </div>
+        <div class="tscroll" style="flex:1;">
+          <table class="gs" id="campaignItemTable"><colgroup id="campaignItemColgroup"></colgroup></table>
+        </div>
+      </div>
+      <div style="width:42%;min-width:320px;display:flex;flex-direction:column;background:#f2f1f6;">
+        <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Preview</span>
+          <div class="lbar" id="campaignItemLbar" style="flex:1;"></div>
+        </div>
+        <div id="campaignItemPreview" style="flex:1;overflow:auto;padding:20px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ APROVAÇÃO EM MASSA (todos os assets do tipo ativo, todos os idiomas de
+     cada um, um embaixo do outro) — pra revisar tudo de uma aba sem abrir item por item. ═══════════ -->
+<div id="campaignBulkApprovalView" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:650;flex-direction:column;">
+  <div class="ph" style="padding:14px 24px;flex-shrink:0;">
+    <span class="ph-t" id="campaignBulkApprovalTitle">Approve copies</span>
+    <div class="ph-a">
+      <button class="tbtn" onclick="closeCampaignBulkApprovalView()">Close</button>
+    </div>
+  </div>
+  <div id="campaignBulkApprovalBody" style="flex:1;overflow:auto;padding:24px;"></div>
+</div>
+
+<!-- ═══════════ HTML EXPORT MODAL (Copy Tagged HTML, editor clássico) ═══════════ -->
+<div id="htmlModal">
+  <div class="hm-box">
+    <div class="hm-hdr">
+      <h2>Tagged HTML</h2>
+      <button class="hm-close" onclick="closeHtmlModal()">&times;</button>
+    </div>
+    <div class="hm-body">
+      <div class="hm-code">
+        <div class="hm-code-hdr">
+          <span class="hm-code-label">HTML with translation tags</span>
+          <button class="hm-copy-btn" id="hmCopyBtn" onclick="copyTaggedHtml()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre id="hmCodePre"></pre>
+      </div>
+      <div class="hm-guide">
+        <h3>How to use this in Braze</h3>
+        <div class="hm-steps">
+          <div class="hm-step">
+            <div class="hm-step-n">1</div>
+            <div class="hm-step-txt">Copy the tagged HTML on the left and paste it into your Braze email template (replacing the current content block).</div>
+          </div>
+          <div class="hm-step">
+            <div class="hm-step-n">2</div>
+            <div class="hm-step-txt">The <strong>{% translation idN %}</strong> tags stay in place — Braze's Liquid engine swaps in the right copy per recipient using the Content Block/attribute your team already maps to language.</div>
+          </div>
+          <div class="hm-step">
+            <div class="hm-step-n">3</div>
+            <div class="hm-step-txt">Grab the spreadsheet below if you need to hand the translations off to someone else (a reviewer, a translation agency, etc).</div>
+          </div>
+        </div>
+        <div class="hm-dl-group">
+          <div class="hm-dl-label">Translations spreadsheet</div>
+          <button class="hm-dl-btn hm-dl-csv" onclick="dlCSV()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download as CSV
+          </button>
+          <button class="hm-dl-btn hm-dl-xlsx" onclick="dlXLSX()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+            Download as XLSX
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1037,14 +1250,18 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
 </div>
 
 <!-- ═══════════ DELETE PROJECT CONFIRM MODAL ═══════════ -->
+<!-- Modal de confirmação genérico pra QUALQUER delete destrutivo (projeto solto, projeto
+     de campanha, item de conteúdo dentro de uma campanha) — tudo passa por aqui em vez de
+     window.confirm(), que em alguns contextos de navegador/embed pode ser bloqueado ou
+     simplesmente não aparecer, fazendo o delete parecer que "não funciona". -->
 <div id="deleteConfirmModal" class="modal-ov" style="display:none;">
   <div class="card modal-card" style="width:100%;max-width:380px;">
     <div class="ci" style="padding:28px;">
-      <h1 style="margin:0 0 6px;">Delete project?</h1>
-      <p class="sub" style="margin-bottom:0;">Are you sure you want to delete <strong id="deleteProjName"></strong>? This action cannot be undone.</p>
+      <h1 id="deleteConfirmTitle" style="margin:0 0 6px;">Delete project?</h1>
+      <p class="sub" id="deleteConfirmMsg" style="margin-bottom:0;">Are you sure you want to delete <strong id="deleteProjName"></strong>? This action cannot be undone.</p>
       <div style="display:flex;gap:10px;margin-top:22px;">
         <button class="btn-back" style="flex:1;" onclick="closeDeleteConfirmModal()">Cancel</button>
-        <button class="btn-next btn-destructive" style="flex:1;margin-top:0;" onclick="confirmProjDelete()">Delete</button>
+        <button class="btn-next btn-destructive" style="flex:1;margin-top:0;" onclick="confirmGenericDelete()">Delete</button>
       </div>
     </div>
   </div>
@@ -1287,7 +1504,7 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
               </div>
               <div class="dz-error" id="fileAlreadyTaggedError" style="margin-bottom:6px;">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-                <span>This HTML already has <strong>{%translation%}</strong> tags. Use <strong>Edit an existing project</strong> instead.</span>
+                <span>This HTML already has <strong>{%translation%}</strong> tags — it looks like an already-tagged export. Please upload the original, untagged HTML.</span>
               </div>
 
               <button class="btn-next" id="btnP1" disabled onclick="goTo(2)" style="margin-top:14px;background:var(--green);">
@@ -1299,126 +1516,6 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
       </div>
     </div>
 
-    <!-- P1B — CONTINUE EDITING (standalone page, opened from the Dashboard) -->
-    <div id="pageContinue" class="page">
-      <div class="cw vcenter">
-        <div style="width:100%;max-width:340px;">
-          <h1 style="font-size:20px;font-weight:600;margin-bottom:6px;">Continue editing</h1>
-          <p style="color:var(--text2);font-size:13px;margin-bottom:28px;">Load a tagged HTML to continue this project.</p>
-
-          <!-- CHOICE — shown first: start with empty translations, or resume from a filled CSV/XLSX -->
-          <div id="continueChoiceCard">
-            <div class="card route-card" style="margin-bottom:12px;cursor:pointer;" onclick="chooseContinueMode('scratch')">
-              <div class="ci" style="padding:24px;">
-                <div style="width:40px;height:40px;border-radius:10px;background:var(--acc-bg);display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                </div>
-                <div style="font-size:15px;font-weight:600;margin-bottom:5px;">Start from scratch</div>
-                <div style="font-size:12px;color:var(--text2);line-height:1.5;">Load a tagged HTML and pick languages fresh — translations start empty, just like a new project.</div>
-              </div>
-            </div>
-            <div class="card route-card" style="cursor:pointer;" onclick="chooseContinueMode('full')">
-              <div class="ci" style="padding:24px;">
-                <div style="width:40px;height:40px;border-radius:10px;background:var(--grn-bg);display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                </div>
-                <div style="font-size:15px;font-weight:600;margin-bottom:5px;">Edit an uploaded project</div>
-                <div style="font-size:12px;color:var(--text2);line-height:1.5;">Load a tagged HTML + an already-filled CSV or XLSX to keep going where you left off.</div>
-              </div>
-            </div>
-            <button class="btn-back" style="margin-top:14px;" onclick="goToDashboard()">← Back</button>
-          </div>
-
-          <!-- FULL IMPORT — tagged HTML + filled CSV/XLSX -->
-          <div class="card route-card" id="cardImport" style="display:none;">
-            <div class="ci" style="padding:24px;">
-              <input type="file" id="fiImportHtml" accept=".html,.htm" style="display:none">
-              <input type="file" id="fiImportCsv" accept=".csv,.xlsx" style="display:none">
-              <div style="width:40px;height:40px;border-radius:10px;background:var(--grn-bg);display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </div>
-              <div style="font-size:15px;font-weight:600;margin-bottom:5px;">Edit an uploaded project</div>
-              <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;">Pick a project you already have on the platform — its tagged HTML loads automatically — then just add the filled CSV or XLSX.</div>
-
-              <div class="field" style="margin-bottom:10px;">
-                <label>Project</label>
-                <select id="importProjectPicker" onchange="onImportProjectPick(this.value)">
-                  <option value="" selected disabled>Choose a project…</option>
-                </select>
-              </div>
-
-              <div id="manualHtmlUploadBlock" style="display:none;">
-                <button class="btn-next" id="btnImportHtml" onclick="document.getElementById('fiImportHtml').click()" style="margin-bottom:6px;background:var(--grn-bg);color:var(--green);border:1.5px solid var(--grn-bd);">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V3m0 0l-4 4m4-4l4 4"/></svg>
-                  Select tagged HTML
-                </button>
-                <div class="dz-error" id="importHtmlNoTagsError" style="margin-bottom:6px;">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-                  <span>This HTML has no <strong>{%translation%}</strong> tags. Use <strong>New project</strong> first.</span>
-                </div>
-              </div>
-              <div id="importHtmlOk" class="file-ok hidden" style="margin-bottom:6px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-                <span id="importHtmlTxt" style="font-size:12px;"></span>
-              </div>
-
-              <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Translations CSV or XLSX</div>
-              <div class="csv-drop-zone" id="importCsvDropZone">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
-                <p><strong>Drop CSV or XLSX here</strong> or click</p>
-              </div>
-              <div class="dz-error" id="importCsvDzError" style="margin-top:6px;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-                <span>Unsupported file. Please upload a <strong>.csv</strong> or <strong>.xlsx</strong>.</span>
-              </div>
-              <div id="importCsvOk" class="file-ok hidden" style="margin-top:6px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-                <span id="importCsvTxt" style="font-size:12px;"></span>
-              </div>
-
-              <div style="display:flex;gap:8px;margin-top:14px;">
-                <button class="btn-back" onclick="backToContinueChoice()">← Back</button>
-                <button class="btn-next" id="btnImport" disabled onclick="loadImport()" style="margin-top:0;background:var(--green);flex:1;">
-                  Open <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- SCRATCH IMPORT — tagged HTML only, languages picked fresh next -->
-          <div class="card route-card" id="cardScratchImport" style="display:none;">
-            <div class="ci" style="padding:24px;">
-              <input type="file" id="fiScratchHtml" accept=".html,.htm" style="display:none">
-              <div style="width:40px;height:40px;border-radius:10px;background:var(--acc-bg);display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-              </div>
-              <div style="font-size:15px;font-weight:600;margin-bottom:5px;">Start from scratch</div>
-              <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;">Load the tagged HTML — you'll pick the languages next, same as a new project.</div>
-
-              <button class="btn-next" id="btnScratchHtml" onclick="document.getElementById('fiScratchHtml').click()" style="margin-bottom:6px;background:var(--acc-bg);color:var(--accent);border:1.5px solid var(--acc-bd);">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V3m0 0l-4 4m4-4l4 4"/></svg>
-                Select tagged HTML
-              </button>
-              <div id="scratchHtmlOk" class="file-ok hidden" style="margin-bottom:6px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-                <span id="scratchHtmlTxt" style="font-size:12px;"></span>
-              </div>
-              <div class="dz-error" id="scratchHtmlNoTagsError" style="margin-bottom:6px;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-                <span>This HTML has no <strong>{%translation%}</strong> tags. Use <strong>New project</strong> first.</span>
-              </div>
-
-              <div style="display:flex;gap:8px;margin-top:14px;">
-                <button class="btn-back" onclick="backToContinueChoice()">← Back</button>
-                <button class="btn-next" id="btnScratchContinue" disabled onclick="confirmStartFromScratch()" style="margin-top:0;background:var(--accent);flex:1;">
-                  Continue <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
 
     <!-- P2 — ORIGIN -->
@@ -1513,22 +1610,32 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
         <div class="ph">
           <span class="ph-t">Translations CSV</span>
           <div class="ph-a" id="edToolbar">
-            <button class="tbtn gallery" onclick="openGallery()" title="Campaign Studio Gallery">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-              Campaign Studio Gallery
-            </button>
             <button class="tbtn html" id="btnDlHtml" onclick="openHtmlModal()">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
               Copy Tagged HTML
             </button>
-            <button class="tbtn csv" onclick="dlCSV()">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              Download CSV
+            <div class="dl-dropdown-wrap">
+              <button class="tbtn csv" onclick="event.stopPropagation();toggleDlDropdown()">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Download
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="dl-dropdown-menu" id="dlDropdownMenu" style="display:none;">
+                <button onclick="closeDlDropdown();dlCSV()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                  Download as CSV
+                </button>
+                <button onclick="closeDlDropdown();dlXLSX()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+                  Download as XLSX
+                </button>
+              </div>
+            </div>
+            <button class="tbtn upload" onclick="document.getElementById('editorCsvInput').click()" title="Upload a filled-in CSV/XLSX to update the translations already in this project">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V3m0 0l-4 4m4-4l4 4"/></svg>
+              Update from CSV
             </button>
-            <button class="tbtn csv" onclick="dlXLSX()" style="border-color:var(--acc-bd);color:var(--accent);background:var(--acc-bg);">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
-              Download XLSX
-            </button>
+            <input type="file" id="editorCsvInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="onEditorCsvUpload(this.files[0])">
             <button class="tbtn" id="btnApprove" onclick="openApprovalView()" style="border-color:#c4b5fd;color:#6d28d9;background:#f5f3ff;font-weight:600;">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
               Approve copies
@@ -1632,121 +1739,20 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
   </div>
 </div>
 
-
-<!-- Image URL tip (shown once on first img-url focus) -->
-<div id="imgUrlTip" style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:9999;max-width:480px;width:calc(100% - 32px);background:#1e1b4b;color:#e0e7ff;border-radius:12px 12px 0 0;padding:16px 20px 20px;box-shadow:0 -4px 24px rgba(0,0,0,.2);animation:tip-up .3s ease;">
-  <div style="display:flex;align-items:flex-start;gap:12px;">
-    <div style="width:36px;height:36px;border-radius:8px;background:#4c1d95;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+<!-- ═══════════ "UPDATE FROM CSV" FAILED — blocking modal instead of a silent "0 cells" toast ═══════════ -->
+<div id="csvUpdateErrorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:14px;padding:28px;max-width:460px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      Couldn't update from that CSV
     </div>
-    <div style="flex:1;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:4px;color:#fff;">Not sure which images to use?</div>
-      <div style="font-size:12px;line-height:1.6;color:#c4b5fd;">Use our gallery of icons, stickers and localised images to make your campaign even better.</div>
-    </div>
-    <button onclick="closeImgTip()" style="background:none;border:none;cursor:pointer;color:#6d28d9;font-size:18px;line-height:1;padding:0;flex-shrink:0;margin-top:-2px;">×</button>
-  </div>
-  <button onclick="openGallery();closeImgTip();" style="margin-top:12px;width:100%;padding:9px;border-radius:8px;border:none;background:#6d28d9;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;justify-content:center;gap:7px;">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-    Open Campaign Studio Gallery
-  </button>
-</div>
-<style>
-@keyframes tip-up { from { transform:translateX(-50%) translateY(100%); opacity:0; } to { transform:translateX(-50%) translateY(0); opacity:1; } }
-</style>
-
-
-<!-- HTML Export Modal -->
-<div id="htmlModal" onclick="if(event.target===this)closeHtmlModal()">
-  <div class="hm-box">
-    <div class="hm-hdr">
-      <h2>Export Tagged HTML</h2>
-      <button class="hm-close" onclick="closeHtmlModal()">×</button>
-    </div>
-    <div class="hm-body">
-      <!-- Left: code -->
-      <div class="hm-code">
-        <div class="hm-code-hdr">
-          <span class="hm-code-label">Tagged HTML</span>
-          <button class="hm-copy-btn" id="hmCopyBtn" onclick="copyTaggedHtml()">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-            Copy
-          </button>
-        </div>
-        <pre id="hmCodePre"></pre>
-      </div>
-      <!-- Right: guide + downloads -->
-      <div class="hm-guide">
-        <h3>How to use in Braze</h3>
-        <div class="hm-steps">
-          <div class="hm-step"><div class="hm-step-n">1</div><div class="hm-step-txt">Open <strong>Braze</strong> and create a new email template or campaign.</div></div>
-          <div class="hm-step"><div class="hm-step-n">2</div><div class="hm-step-txt">In the editor, choose the <strong>Drag &amp; Drop editor</strong>.</div></div>
-          <div class="hm-step"><div class="hm-step-n">3</div><div class="hm-step-txt">Drag an <strong>HTML</strong> block into the email body.</div></div>
-          <div class="hm-step"><div class="hm-step-n">4</div><div class="hm-step-txt"><strong>Paste the tagged HTML</strong> (copied on the left) into the block.</div></div>
-          <div class="hm-step"><div class="hm-step-n">5</div><div class="hm-step-txt">In the left menu, select <strong>"Languages"</strong> and set up multilanguage with the CSV you'll download below.</div></div>
-        </div>
-        <div class="hm-dl-label">Download translations</div>
-        <div class="hm-dl-group">
-          <button class="hm-dl-btn hm-dl-csv" onclick="dlCSV()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            Download CSV
-          </button>
-          <button class="hm-dl-btn hm-dl-xlsx" onclick="dlXLSX()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
-            Download XLSX
-          </button>
-        </div>
-      </div>
+    <p id="csvUpdateErrorBody" style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:20px;"></p>
+    <div style="display:flex;justify-content:flex-end;">
+      <button onclick="closeCsvUpdateErrorModal()" style="padding:8px 18px;border-radius:8px;border:none;background:var(--accent);font-size:13px;font-weight:600;cursor:pointer;color:#fff;font-family:var(--sans);">Got it</button>
     </div>
   </div>
 </div>
 
-
-<!-- Gallery Modal -->
-<div id="galleryModal" onclick="if(event.target===this)closeGallery()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;align-items:center;justify-content:center;">
-  <div style="background:#1e1b4b;border-radius:16px;width:90%;max-width:440px;padding:28px;box-shadow:0 12px 48px rgba(0,0,0,.3);position:relative;">
-    <button onclick="closeGallery()" style="position:absolute;top:14px;right:16px;background:none;border:none;cursor:pointer;color:#c4b5fd;font-size:20px;line-height:1;padding:0;">×</button>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-      <div style="width:36px;height:36px;border-radius:9px;background:#4c1d95;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-      </div>
-      <div>
-        <div style="font-size:14px;font-weight:700;color:#fff;">Campaign Studio Gallery</div>
-        <div style="font-size:11px;color:#a78bfa;">Select a collection to explore</div>
-      </div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin:20px 0 16px;">
-      <a href="https://studio.wellhub.com/gallery/localized" target="_blank" onclick="galleryLinkClick(this)" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:10px;background:#2e1f63;border:1px solid #4c1d95;text-decoration:none;transition:background .12s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        <span style="font-size:13px;font-weight:600;color:#e0e7ff;">Localized images</span>
-        <svg style="margin-left:auto;" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </a>
-      <a href="https://studio.wellhub.com/gallery/stickers" target="_blank" onclick="galleryLinkClick(this)" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:10px;background:#2e1f63;border:1px solid #4c1d95;text-decoration:none;transition:background .12s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
-        <span style="font-size:13px;font-weight:600;color:#e0e7ff;">Stickers</span>
-        <svg style="margin-left:auto;" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </a>
-      <a href="https://studio.wellhub.com/gallery/icons" target="_blank" onclick="galleryLinkClick(this)" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:10px;background:#2e1f63;border:1px solid #4c1d95;text-decoration:none;transition:background .12s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        <span style="font-size:13px;font-weight:600;color:#e0e7ff;">Icons</span>
-        <svg style="margin-left:auto;" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </a>
-      <a href="https://studio.wellhub.com/gallery/illustrations" target="_blank" onclick="galleryLinkClick(this)" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:10px;background:#2e1f63;border:1px solid #4c1d95;text-decoration:none;transition:background .12s;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        <span style="font-size:13px;font-weight:600;color:#e0e7ff;">Illustrations</span>
-        <svg style="margin-left:auto;" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </a>
-    </div>
-    <div style="background:#2e1f63;border-radius:10px;padding:12px 14px;border:1px solid #4c1d95;">
-      <div style="display:flex;align-items:flex-start;gap:8px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-        <div style="font-size:11px;color:#c4b5fd;line-height:1.6;">
-          <strong style="color:#e0e7ff;display:block;margin-bottom:2px;">This link will open externally.</strong>
-          Once you find an image, upload it <a href="https://dashboard.braze.com/app_settings/app_settings/media" target="_blank" style="color:#a78bfa;font-weight:600;">here</a> in Braze, then paste the generated URL into the image field in the editor.
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ═══════════ APPROVAL VIEW (per-country preview grid + Figma-style pin comments) ═══════════ -->
 <div id="approvalView">
@@ -2020,7 +2026,7 @@ setInterval(async () => {
   const dash = document.getElementById('dashboardScreen');
   if(!dash || dash.style.display === 'none') return;
   if(ghConfigured()) await ghPullProjects();
-  renderDashboard();
+  renderDashboardIfChanged();
 }, 15000);
 
 // Enquanto a pessoa estiver dentro do editor de um projeto, verifica periodicamente
@@ -2192,7 +2198,7 @@ function sbOnProjectsChanged() {
   _sbRefreshTimer = setTimeout(async () => {
     await ghPullProjects();
     const dash = document.getElementById('dashboardScreen');
-    if(dash && dash.style.display !== 'none') renderDashboard();
+    if(dash && dash.style.display !== 'none') renderDashboardIfChanged();
     checkMyLockTakeover(); // se outra pessoa assumiu o projeto que eu tenho aberto, avisa na hora
     checkApprovalEditLockLive(); // se eu tô na Approval View e o dono começou a editar, bloqueia na hora
   }, 250);
@@ -2572,6 +2578,17 @@ async function goToDashboard() {
   // 3min, e reabrir o mesmo projeto (até na mesma aba, se a página recarregou
   // no meio tempo) achava por engano que ele "já estava aberto em outra aba".
   projReleaseMine();
+  // A tela de Projetos (campanha) é um overlay fixed próprio, por cima de tudo —
+  // sem isso, clicar em "Dashboard" na navbar global de dentro dela não tirava
+  // ela da frente, e a pessoa ficava "presa" sem conseguir voltar (nem clicar em
+  // mais nada, já que ela cobre a tela inteira com um z-index mais alto).
+  if(_campaign) {
+    saveCampaignProject();
+    _campaign = null;
+    _campaignItemIndex = -1;
+    currentProjectId = null;
+  }
+  document.getElementById('campaignScreen').style.display = 'none';
   document.getElementById('appBody').style.display = 'none';
   document.getElementById('dashboardScreen').style.display = 'block';
   document.getElementById('hdrBar').style.display = 'none';
@@ -2610,30 +2627,31 @@ function escJsAttr(s) {
 
 function renderDashFolders(mine) {
   const section = document.getElementById('dashFoldersSection');
-  const row = document.getElementById('dashFoldersRow');
-  if(!section || !row) return;
+  const select = document.getElementById('dashFolderSelect');
+  const manage = document.getElementById('dashFolderManage');
+  if(!section || !select) return;
   const folders = [...new Set(mine.map(p => p.folder).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   if(_dashFolderFilter && !folders.includes(_dashFolderFilter)) _dashFolderFilter = null;
   if(!folders.length) { section.style.display = 'none'; return; }
   section.style.display = '';
-  const allChip = `<button class="folder-chip ${_dashFolderFilter === null ? 'active' : ''}" onclick="setDashFolderFilter(null)">📁 All<span class="folder-count">${mine.length}</span></button>`;
-  const folderChips = folders.map(f => {
-    const count = mine.filter(p => p.folder === f).length;
-    const safe = escJsAttr(f);
-    return `
-      <div class="folder-chip-wrap">
-        <button class="folder-chip ${_dashFolderFilter === f ? 'active' : ''}" onclick="setDashFolderFilter('${safe}')">📁 ${escHtml(f)}<span class="folder-count">${count}</span></button>
-        <span class="folder-chip-manage">
-          <button class="folder-chip-icon" title="Rename folder" onclick="event.stopPropagation();openRenameFolderModal('${safe}')">✎</button>
-          <button class="folder-chip-icon" title="Delete folder" onclick="event.stopPropagation();deleteFolderEverywhere('${safe}')">🗑</button>
-        </span>
-      </div>`;
-  }).join('');
-  row.innerHTML = `<div class="folder-chip-wrap">${allChip}</div>` + folderChips;
+  // <select> nativo — só permite escolher UMA pasta por vez, sem precisar reforçar
+  // isso na mão (era possível ficar em dúvida se os chips permitiam mais de um).
+  const opts = [`<option value="">📁 All (${folders.length})</option>`]
+    .concat(folders.map(f => `<option value="${escHtml(f)}" ${_dashFolderFilter === f ? 'selected' : ''}>📁 ${escHtml(f)} (${mine.filter(p => p.folder === f).length})</option>`));
+  select.innerHTML = opts.join('');
+  select.value = _dashFolderFilter || '';
+  // Renomear/apagar só fazem sentido com uma pasta específica escolhida (não em "All").
+  if(manage) manage.style.display = _dashFolderFilter ? 'inline-flex' : 'none';
 }
 
 function setDashFolderFilter(name) {
   _dashFolderFilter = name;
+  renderDashboard();
+}
+
+let _dashProjectSearch = '';
+function setDashProjectSearch(text) {
+  _dashProjectSearch = text;
   renderDashboard();
 }
 
@@ -2709,23 +2727,59 @@ function sortDashProjects(list) {
   return [...list].sort((a, b) => key(b) - key(a));
 }
 
+// Assinatura barata dos dados que realmente afetam o que o Dashboard mostra — usada
+// só pra decidir se vale a pena re-renderizar (ver renderDashboardIfChanged). Sem
+// isso, um poll de fundo que não mudou nada reconstruía TUDO do zero mesmo assim,
+// inclusive recriando o iframe de preview de cada card — um "pisca" visível a cada
+// 15s (ou a cada eco do realtime) que deixava a ferramenta com cara de instável.
+function dashDataSnapshot() {
+  const me = authCurrentUser();
+  if(!me) return '';
+  return JSON.stringify(projGetAll().map(p => ({
+    id: p.id, name: p.name, folder: p.folder, owner: p.owner,
+    sharedWith: p.sharedWith, approvers: p.approvers,
+    lockedBy: p.lockedBy, lockedAt: p.lockedAt, approvingUsers: p.approvingUsers,
+    createdAt: p.createdAt, updatedAt: p.updatedAt,
+    data: p.data ? { html: p.data.html, origin: p.data.origin, langs: p.data.langs } : null
+  })));
+}
+
+let _lastDashSnapshot = null;
+
+// Chamada pelos gatilhos de FUNDO (poll periódico, eco do realtime) — só re-renderiza
+// de verdade se algo que o Dashboard mostra realmente mudou desde a última vez. Ações
+// diretas da própria pessoa (deletar, renomear, etc.) continuam chamando
+// renderDashboard() direto, sem essa checagem — o feedback delas precisa ser instantâneo.
+function renderDashboardIfChanged() {
+  if(dashDataSnapshot() === _lastDashSnapshot) return;
+  renderDashboard();
+}
+
 function renderDashboard() {
   const me = authCurrentUser();
   if(!me) return;
+  _lastDashSnapshot = dashDataSnapshot();
 
   renderProfileAvatar(me); // mantém o item "Members" do menu certo se o papel mudar
 
-  const projects = projGetAll();
+  // p.kind==='campaign' nunca entra nessas listas clássicas — são os projetos "soltos" de
+  // sempre (um e-mail só), sem mudar nada do jeito que já funcionavam.
+  const projects = projGetAll().filter(p => p.kind !== 'campaign');
   const mine = sortDashProjects(projects.filter(p => p.owner.toLowerCase() === me.email.toLowerCase()));
   const shared = sortDashProjects(projects.filter(p => p.owner.toLowerCase() !== me.email.toLowerCase() && (p.sharedWith||[]).some(e => e.toLowerCase() === me.email.toLowerCase())));
   // Projetos onde a pessoa é approver — aparecem aqui mesmo se ela também for sharedWith,
   // pra ficar fácil achar o que falta revisar sem precisar procurar em "Shared with me".
   const toApprove = sortDashProjects(projects.filter(p => p.owner.toLowerCase() !== me.email.toLowerCase() && (p.approvers||[]).some(e => e.toLowerCase() === me.email.toLowerCase())));
+  renderCampaignsList();
 
   renderDashFolders(mine);
-  const mineFiltered = _dashFolderFilter ? mine.filter(p => p.folder === _dashFolderFilter) : mine;
+  const byFolder = _dashFolderFilter ? mine.filter(p => p.folder === _dashFolderFilter) : mine;
+  const searchTerm = _dashProjectSearch.trim().toLowerCase();
+  const mineFiltered = searchTerm ? byFolder.filter(p => (p.name || '').toLowerCase().includes(searchTerm)) : byFolder;
 
-  const emptyMine = _dashFolderFilter
+  const emptyMine = searchTerm
+    ? `<div class="empty-state"><p>No projects match "${escHtml(_dashProjectSearch.trim())}"${_dashFolderFilter ? ' in this folder' : ''}.</p></div>`
+    : _dashFolderFilter
     ? `<div class="empty-state"><p>No projects in this folder.</p></div>`
     : `<div class="empty-state">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
@@ -2744,6 +2798,956 @@ function renderDashboard() {
   if(toApproveList) toApproveList.innerHTML = toApprove.map(p => projRowHtml(p, false)).join('');
 
   if(me.role === 'admin') renderDashUserList();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROJETOS (campanhas multi-item: e-mail + in-app + push num único projeto)
+   ─────────────────────────────────────────────────────────────────────────
+   Área separada da lista clássica de projetos (que continua sendo "um e-mail
+   só", intocada). Aqui, p.kind === 'campaign' e o conteúdo vive em p.items[],
+   um item por peça (e-mail/in-app/push), cada um com suas próprias linhas
+   {id, src, isImg, translations} e seus próprios idiomas. Reaproveita o mesmo
+   array/sync/lock de projetos por baixo (projGetAll/projSaveAll) — só a
+   renderização e o editor são diferentes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function campaignGetAll() {
+  return projGetAll().filter(p => p.kind === 'campaign');
+}
+
+function renderCampaignsList() {
+  const me = authCurrentUser();
+  const list = document.getElementById('campaignsList');
+  if(!me || !list) return;
+  const mine = campaignGetAll().filter(p => p.owner.toLowerCase() === me.email.toLowerCase());
+  if(!mine.length) {
+    list.innerHTML = `<div class="empty-state"><p>No projects yet.<br>Click "New project" above to group emails, in-apps and pushes together.</p></div>`;
+    return;
+  }
+  list.innerHTML = sortDashProjects(mine).map(campaignRowHtml).join('');
+}
+
+function campaignRowHtml(p) {
+  const items = p.items || [];
+  const typeCounts = {};
+  items.forEach(it => { typeCounts[it.type] = (typeCounts[it.type] || 0) + 1; });
+  const typeLabel = { email: 'Email', inapp: 'In-app', push: 'Push' };
+  const badges = Object.keys(typeCounts).map(t =>
+    `<span class="lang-chip">${escHtml(typeLabel[t] || t)} ×${typeCounts[t]}</span>`
+  ).join('');
+  const progressBadge = translationProgressBadgeHtml(campaignTranslationStats(p));
+  return `
+    <div class="proj-row">
+      <div class="proj-body">
+        <div class="proj-info">
+          <div class="proj-header">
+            <div class="proj-name">
+              ${escHtml(p.name)}
+              <button class="proj-rename-btn" title="Rename project" onclick="event.stopPropagation();renameCampaign('${p.id}')">✎</button>
+            </div>
+          </div>
+          <div class="proj-meta">Created on ${new Date(p.createdAt).toLocaleDateString('en-US')}${p.updatedAt ? ` · Last edited ${relativeTime(p.updatedAt)}` : ''}</div>
+          <div class="proj-flags" style="margin-top:6px;">${badges || '<span style="font-size:11px;color:var(--text3);">No content yet</span>'}</div>
+          ${progressBadge ? `<div class="proj-badges" style="margin-top:6px;">${progressBadge}</div>` : ''}
+        </div>
+      </div>
+      <div class="proj-actions">
+        <button class="btn-go" onclick="openCampaignEditor('${p.id}')">Open Project</button>
+        <button class="btn-danger" onclick="deleteCampaign('${p.id}')">Delete</button>
+      </div>
+    </div>
+  `;
+}
+
+async function renameCampaign(id) {
+  const p = campaignGetAll().find(x => x.id === id);
+  if(!p) return;
+  const name = prompt('Project name', p.name);
+  if(!name || !name.trim()) return;
+  if(ghConfigured()) await ghPullProjects();
+  const projects = projGetAll();
+  const fresh = projects.find(x => x.id === id);
+  if(fresh) { fresh.name = name.trim(); fresh.updatedAt = Date.now(); projSaveAll(projects); }
+  renderDashboard();
+}
+
+function deleteCampaign(id) {
+  _pendingDeleteId = id;
+  _pendingDeleteKind = 'campaign';
+  const p = campaignGetAll().find(x => x.id === id);
+  document.getElementById('deleteConfirmTitle').textContent = 'Delete project?';
+  document.getElementById('deleteConfirmMsg').innerHTML = `Delete <strong>${escHtml(p ? p.name : 'this project')}</strong> and all its content (emails, in-app messages, pushes)? This cannot be undone.`;
+  document.getElementById('deleteConfirmModal').style.display = 'flex';
+}
+
+async function confirmCampaignDelete() {
+  if(!_pendingDeleteId) return;
+  if(ghConfigured()) await ghPullProjects();
+  _recentlyDeletedProjectIds.add(_pendingDeleteId);
+  const projects = projGetAll().filter(p => p.id !== _pendingDeleteId);
+  projSaveAll(projects);
+  if(currentProjectId === _pendingDeleteId) currentProjectId = null;
+  closeDeleteConfirmModal();
+  renderDashboard();
+}
+
+function openNewCampaignModal() {
+  const input = document.getElementById('newCampaignNameInput');
+  input.value = '';
+  document.getElementById('newCampaignModal').style.display = 'flex';
+  setTimeout(() => input.focus(), 0);
+}
+function closeNewCampaignModal() {
+  document.getElementById('newCampaignModal').style.display = 'none';
+}
+
+async function createCampaign() {
+  const name = (document.getElementById('newCampaignNameInput').value || '').trim();
+  if(!name) return;
+  const me = authCurrentUser();
+  if(!me) return;
+  if(ghConfigured()) await ghPullProjects();
+  const projects = projGetAll();
+  const p = {
+    id: 'camp_' + Date.now(),
+    kind: 'campaign',
+    name,
+    owner: me.email,
+    sharedWith: [],
+    approvers: [],
+    items: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  projects.push(p);
+  projSaveAll(projects);
+  closeNewCampaignModal();
+  openCampaignEditor(p.id);
+}
+
+// ── Editor de projeto (abas por item) ──────────────────────────────────────
+let _campaign = null;        // o projeto de campanha aberto no momento
+let _campaignItemIndex = -1; // índice do item ativo dentro de _campaign.items (-1 = nenhum, ex: modo galeria)
+let _campaignActiveType = 'email'; // aba de tipo ativa ('email'|'inapp'|'push') — define o que a galeria lista
+let _campaignPushPreview = false; // true quando o item ativo é do tipo push (sem rawHtml pra Approval View processar)
+let _campaignInappPreview = false; // true quando o item ativo é do tipo in-app (overlay fixed em tela cheia — precisa de um "viewport" de celular fixo, não altura auto de e-mail)
+
+function openCampaignEditor(id) {
+  const p = campaignGetAll().find(x => x.id === id);
+  if(!p) return;
+  _campaign = p;
+  _campaignItemIndex = -1;
+  _campaignViewMode = 'gallery';
+  _campaignActiveType = 'email';
+  currentProjectId = p.id; // pro código de aprovação (notificações/lock) resolver o projeto certo
+  document.getElementById('dashboardScreen').style.display = 'none';
+  document.getElementById('campaignScreen').style.display = 'flex';
+  document.getElementById('campaignScreenTitle').textContent = p.name;
+  renderCampaignTabs();
+  renderCampaignMain();
+}
+
+async function saveCampaignProject() {
+  // Captura a referência ANTES do await — se _campaign virar null enquanto essa função
+  // está esperando o ghPullProjects() (ex: a pessoa clicou "Dashboard" e goToDashboard()
+  // zerou _campaign logo depois de chamar isso sem esperar), o resto da função continuava
+  // lendo a variável global (já null) e estourava "Cannot read properties of null" —
+  // o que fazia o autosave de saída silenciosamente NUNCA salvar a última edição pendente.
+  const camp = _campaign;
+  if(!camp) return;
+  camp.updatedAt = Date.now();
+  if(ghConfigured()) await ghPullProjects();
+  const projects = projGetAll();
+  const idx = projects.findIndex(x => x.id === camp.id);
+  if(idx === -1) projects.push(camp); else projects[idx] = camp;
+  projSaveAll(projects);
+}
+
+let _campaignAutosaveTimer = null;
+function scheduleCampaignAutosave() {
+  clearTimeout(_campaignAutosaveTimer);
+  _campaignAutosaveTimer = setTimeout(saveCampaignProject, 600);
+}
+
+// A barra de cima mostra os 3 TIPOS (Email/In-app/Push) — clicar num tipo mostra
+// direto na tela a galeria com todos os assets daquele tipo (preview + Edit/Approve
+// em cima de cada um), sem precisar abrir modal nenhum pra só OLHAR o que já existe.
+function renderCampaignTabs() {
+  const wrap = document.getElementById('campaignTabs');
+  if(!wrap || !_campaign) return;
+  const items = _campaign.items || [];
+  const types = ['email', 'inapp', 'push'];
+  const typeLabel = { email: 'Email', inapp: 'In-app', push: 'Push' };
+  wrap.innerHTML = types.map(type => {
+    const count = items.filter(it => it.type === type).length;
+    const isActiveType = _campaignActiveType === type;
+    return `<button class="dash-sort-btn ${isActiveType ? 'active' : ''}" style="white-space:nowrap;" onclick="switchCampaignTab('${type}')">${typeLabel[type]}${count ? ` (${count})` : ''}</button>`;
+  }).join('');
+}
+
+function switchCampaignTab(type) {
+  _campaignActiveType = type;
+  _campaignViewMode = 'gallery';
+  _campaignItemIndex = -1;
+  renderCampaignTabs();
+  renderCampaignMain();
+}
+
+// "Empresta" o S global só pra gerar o preview (buildPreviewHtml/annotateConditionals/
+// renderFooterPlaceholder dependem dele) — a grade em si lê e escreve direto em item.rows,
+// não depende de S. Isso evita duplicar todo o motor de tagueamento/preview de e-mail.
+// Também carrega o estado de aprovação (comentários/aprovado-por-idioma) do item pra
+// dentro de S, já que a Approval View clássica lê/escreve tudo isso via S.approval*.
+function activateCampaignItemIntoS(item) {
+  S.rawHtml = item.rawHtml || null;
+  S.origin = item.origin || null;
+  S.allC = [...COUNTRIES];
+  S.csv = { name: item.name, rows: item.rows || [], langs: item.langs || [] };
+  S.selImgs = new Set((item.rows || []).filter(r => r.isImg).map(r => r.src));
+  S.approvalComments = Array.isArray(item.approvalComments) ? [...item.approvalComments] : [];
+  S.approvalDoneByLang = (item.approvalDoneByLang && typeof item.approvalDoneByLang === 'object') ? { ...item.approvalDoneByLang } : {};
+  S.approvalActivity = Array.isArray(item.approvalActivity) ? [...item.approvalActivity] : [];
+  S.approvalDeletedIds = Array.isArray(item.approvalDeletedIds) ? [...item.approvalDeletedIds] : [];
+  _campaignPushPreview = item.type === 'push'; // avisa buildApprovalFrameHtml pra não tentar tratar como HTML de e-mail
+  _campaignInappPreview = item.type === 'inapp'; // avisa a Approval View pra tratar como tela de celular, não altura de e-mail
+}
+
+// Devolve o estado de aprovação de S pro item — chamado pelo autosave de aprovação
+// da campanha (ver scheduleApprovalAutosave) e ao trocar/fechar o item.
+function commitCampaignItemApprovalState() {
+  const item = _campaign && _campaignItemIndex >= 0 ? _campaign.items[_campaignItemIndex] : null;
+  if(!item) return;
+  item.approvalComments = [...S.approvalComments];
+  item.approvalDoneByLang = { ...S.approvalDoneByLang };
+  item.approvalActivity = [...S.approvalActivity];
+  item.approvalDeletedIds = [...S.approvalDeletedIds];
+}
+
+let _campaignViewMode = 'gallery'; // 'gallery' (lista de assets do tipo ativo) ou 'edit' (grade+preview lado a lado de UM item)
+
+// Despacha entre a galeria (landing de cada aba — todos os assets daquele tipo, com
+// preview + Edit/Approve em cima) e o modo de edição (grade+preview de um item só).
+function renderCampaignMain() {
+  const emptyEl = document.getElementById('campaignItemEmpty');
+  const galleryEl = document.getElementById('campaignGallery');
+  const bodyEl = document.getElementById('campaignItemBody');
+  if(!_campaign) return;
+  const items = _campaign.items || [];
+
+  if(_campaignViewMode === 'edit' && _campaignItemIndex >= 0 && items[_campaignItemIndex]) {
+    const item = items[_campaignItemIndex];
+    emptyEl.style.display = 'none';
+    galleryEl.style.display = 'none';
+    bodyEl.style.display = 'block';
+    activateCampaignItemIntoS(item);
+    document.getElementById('campaignItemLabel').textContent = item.name;
+    renderCampaignGrid(item);
+    renderCampaignLangBar(item);
+    renderCampaignPreview(item, item._activeLang || (item.langs && item.langs[0]) || null);
+    return;
+  }
+
+  // Modo galeria: lista todos os assets do tipo ativo, cada um já com preview visível.
+  _campaignViewMode = 'gallery';
+  bodyEl.style.display = 'none';
+  const pairs = items.map((it, idx) => ({ it, idx })).filter(x => x.it.type === _campaignActiveType);
+  if(!pairs.length) {
+    emptyEl.style.display = 'flex';
+    galleryEl.style.display = 'none';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  galleryEl.style.display = 'block';
+  renderCampaignGallery(pairs);
+}
+
+function backToCampaignGallery() {
+  _campaignViewMode = 'gallery';
+  _campaignItemIndex = -1;
+  renderCampaignMain();
+}
+
+function openCampaignItemEdit(idx) {
+  _campaignItemIndex = idx;
+  _campaignViewMode = 'edit';
+  renderCampaignMain();
+}
+
+function openCampaignItemApprove(idx) {
+  _campaignItemIndex = idx;
+  openCampaignApprovalView();
+}
+
+const CAMP_ASSET_LABEL = { email: 'email', inapp: 'in-app message', push: 'push' };
+
+function renderCampaignGallery(pairs) {
+  const grid = document.getElementById('campaignGalleryGrid');
+  if(!grid) return;
+  grid.innerHTML = pairs.map(({ it, idx }) => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);">
+        <span style="flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(it.name)}</span>
+        ${translationProgressBadgeHtml(campaignItemTranslationStats(it), 'flex-shrink:0;font-size:10px;padding:2px 8px;')}
+        <button class="tbtn" style="height:26px;padding:0 10px;font-size:11px;border-color:#c4b5fd;color:#6d28d9;background:#f5f3ff;font-weight:600;" onclick="openCampaignItemApprove(${idx})">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+          Approve
+        </button>
+        <button class="tbtn html" style="height:26px;padding:0 10px;font-size:11px;" onclick="openCampaignItemEdit(${idx})">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+      </div>
+      <div id="campAssetPreview-${idx}" style="flex:1;background:#f2f1f6;"></div>
+    </div>
+  `).join('');
+  pairs.forEach(({ it, idx }) => renderCampaignAssetThumb(it, idx));
+}
+
+// Cada card da galeria precisa do seu PRÓPRIO preview renderizado — como todos são do
+// mesmo tipo (a galeria é por aba), dá pra reusar buildPreviewHtml normalmente,
+// só tomando cuidado de re-popular S a cada item antes de gerar o HTML dele.
+function renderCampaignAssetThumb(item, idx) {
+  const wrap = document.getElementById('campAssetPreview-' + idx);
+  if(!wrap) return;
+  if(item.type === 'push') {
+    const titleRow = item.rows.find(r => r.id === 'id1');
+    const bodyRow = item.rows.find(r => r.id === 'id2');
+    wrap.innerHTML = `
+      <div style="padding:20px 14px;">
+        <div style="max-width:320px;margin:0 auto;background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 12px rgba(0,0,0,.1);display:flex;gap:10px;">
+          <div style="width:38px;height:38px;border-radius:10px;background:#d8385e;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;">🔔</div>
+          <div style="min-width:0;">
+            <div style="font-weight:700;font-size:13px;color:#000;margin-bottom:2px;">${escHtml(titleRow?.src || '') || '<em style="color:#aaa;">No title yet</em>'}</div>
+            <div style="font-size:12px;color:#333;line-height:1.4;">${escHtml(bodyRow?.src || '') || '<em style="color:#aaa;">No body yet</em>'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  activateCampaignItemIntoS(item);
+  if(!S.rawHtml) { wrap.innerHTML = `<p style="text-align:center;color:var(--text3);font-size:12px;padding:40px 12px;">No HTML uploaded.</p>`; return; }
+  const origLangName = item.origin ? COUNTRIES.find(c => c.code === item.origin)?.lang : null;
+  const html = buildPreviewHtml(origLangName);
+  const srcdoc = html.replace(/"/g, '&quot;');
+  const isInapp = item.type === 'inapp';
+  const h = 340;
+  wrap.innerHTML = `<div style="height:${h}px;overflow:hidden;">
+    <iframe style="width:100%;height:${h}px;border:none;background:${isInapp ? 'transparent' : '#fff'};" srcdoc="${srcdoc}"></iframe>
+  </div>`;
+}
+
+// "Approve copies" de um item de campanha — reaproveita a MESMA Approval View
+// (Figma-style, pan/zoom, comentários) que o fluxo clássico de e-mail já usa.
+function openCampaignApprovalView() {
+  const item = _campaign && _campaignItemIndex >= 0 ? _campaign.items[_campaignItemIndex] : null;
+  if(!item) return;
+  if(item.type !== 'push' && !item.rawHtml) { alert('Upload an HTML first.'); return; }
+  currentProjectId = _campaign.id; // pra notificações/checagem de lock apontarem pro projeto certo
+  activateCampaignItemIntoS(item);
+  openApprovalView();
+}
+
+// ── Aprovação em massa: todos os assets do tipo ativo, um por linha, com TODAS as
+//    traduções (+ original) lado a lado dentro da linha — pra revisar a aba inteira
+//    sem abrir item por item. É uma tela própria (não a Approval View clássica):
+//    aqui só existe aprovar/desaprovar por idioma, sem comentários — pra comentar,
+//    a pessoa ainda abre o item e usa "Approve copies" de dentro dele. ──
+function openCampaignBulkApprovalView() {
+  if(!_campaign) return;
+  const typeLabel = { email: 'Email', inapp: 'In-app', push: 'Push' }[_campaignActiveType] || '';
+  document.getElementById('campaignBulkApprovalTitle').textContent = 'Approve copies — ' + typeLabel;
+  document.getElementById('campaignBulkApprovalView').style.display = 'flex';
+  renderCampaignBulkApproval();
+}
+
+function closeCampaignBulkApprovalView() {
+  document.getElementById('campaignBulkApprovalView').style.display = 'none';
+  saveCampaignProject();
+}
+
+function renderCampaignBulkApproval() {
+  const wrap = document.getElementById('campaignBulkApprovalBody');
+  if(!wrap || !_campaign) return;
+  const pairs = (_campaign.items || []).map((it, idx) => ({ it, idx })).filter(x => x.it.type === _campaignActiveType);
+  if(!pairs.length) {
+    wrap.innerHTML = `<div class="empty-state"><p>No content yet in this tab.</p></div>`;
+    return;
+  }
+  // bg que engloba TODOS os e-mails (traduções + original) desta aba.
+  wrap.innerHTML = `
+    <div style="background:var(--s2);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px;max-width:1400px;margin:0 auto;">
+      ${pairs.map(({ it, idx }) => campaignBulkRowHtml(it, idx)).join('')}
+    </div>
+  `;
+  pairs.forEach(({ it, idx }) => renderCampaignBulkRowThumbs(it, idx));
+}
+
+// Uma linha = um e-mail/asset, com bg própria — dentro dela, um cartão por idioma
+// (origem primeiro, depois as traduções), cada um com preview + Approve/Approved.
+function campaignBulkRowHtml(item, idx) {
+  const origCountry = COUNTRIES.find(c => c.code === item.origin);
+  const langs = [...new Set([origCountry?.lang, ...(item.langs || [])].filter(Boolean))];
+  return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;">${escHtml(item.name)}</div>
+      <div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;">
+        ${langs.map(lang => campaignBulkLangCardHtml(item, idx, lang, lang === origCountry?.lang)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// In-app é um overlay fixed em tela cheia (cobre 100% do iframe) — precisar caber
+// inteiro (card + CTA) igual ao previewer, por isso ganha um cartão bem maior que
+// email/push, que são conteúdo curto e cabem tranquilo num espaço pequeno.
+function campBulkCardSize(type) {
+  return type === 'inapp' ? { w: 340, h: 460 } : { w: 210, h: 170 };
+}
+
+function campaignBulkLangCardHtml(item, idx, lang, isOrig) {
+  const country = COUNTRIES.find(c => c.lang === lang);
+  const done = item.approvalDoneByLang && item.approvalDoneByLang[lang];
+  const cid = 'campBulkThumb-' + idx + '-' + cssSafeLang(lang);
+  const size = campBulkCardSize(item.type);
+  return `
+    <div style="flex-shrink:0;width:${size.w}px;display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text2);">
+        <span>${country?.flag || '🌐'}</span><span>${escHtml(country?.name || lang)}</span>
+        ${isOrig ? '<span class="av-frame-origin-badge">origin</span>' : ''}
+      </div>
+      <div id="${cid}" style="height:${size.h}px;border-radius:8px;overflow:hidden;background:#f2f1f6;"></div>
+      ${!isOrig ? `<button class="tbtn" style="height:24px;padding:0 8px;font-size:10.5px;${done ? 'border-color:#bbf7d0;color:#15803d;background:#f0fdf4;' : 'border-color:#c4b5fd;color:#6d28d9;background:#f5f3ff;'}" onclick="toggleCampaignBulkApprove(${idx},'${escJsAttr(lang)}')">${done ? '✓ Approved' : 'Approve'}</button>` : '<div style="height:24px;"></div>'}
+    </div>
+  `;
+}
+
+// Preenche o preview de cada cartão de idioma — mesma lógica de sempre (buildPreviewHtml
+// via S emprestado, ou o cartãozinho de push), só que agora repetida por item×idioma.
+function renderCampaignBulkRowThumbs(item, idx) {
+  const origCountry = COUNTRIES.find(c => c.code === item.origin);
+  const langs = [...new Set([origCountry?.lang, ...(item.langs || [])].filter(Boolean))];
+  if(item.type === 'push') {
+    const titleRow = item.rows.find(r => r.id === 'id1');
+    const bodyRow = item.rows.find(r => r.id === 'id2');
+    langs.forEach(lang => {
+      const el = document.getElementById('campBulkThumb-' + idx + '-' + cssSafeLang(lang));
+      if(!el) return;
+      const isOrig = lang === origCountry?.lang;
+      const title = isOrig ? (titleRow?.src || '') : (titleRow?.translations?.[lang] || '');
+      const body = isOrig ? (bodyRow?.src || '') : (bodyRow?.translations?.[lang] || '');
+      el.innerHTML = `<div style="padding:10px;height:100%;box-sizing:border-box;display:flex;align-items:center;">
+        <div style="background:#fff;border-radius:10px;padding:10px;display:flex;gap:8px;width:100%;box-shadow:0 1px 6px rgba(0,0,0,.08);box-sizing:border-box;">
+          <div style="width:28px;height:28px;border-radius:8px;background:#d8385e;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;">🔔</div>
+          <div style="min-width:0;">
+            <div style="font-weight:700;font-size:11px;">${escHtml(title) || '<em style="color:#aaa;">—</em>'}</div>
+            <div style="font-size:10px;color:#333;">${escHtml(body) || ''}</div>
+          </div>
+        </div>
+      </div>`;
+    });
+    return;
+  }
+  activateCampaignItemIntoS(item);
+  const isInapp = item.type === 'inapp';
+  langs.forEach(lang => {
+    const el = document.getElementById('campBulkThumb-' + idx + '-' + cssSafeLang(lang));
+    if(!el) return;
+    if(!S.rawHtml) { el.innerHTML = `<p style="font-size:10px;color:var(--text3);text-align:center;padding-top:70px;">No HTML</p>`; return; }
+    const html = buildPreviewHtml(lang);
+    const srcdoc = html.replace(/"/g, '&quot;');
+    el.innerHTML = `<iframe style="width:100%;height:100%;border:none;background:${isInapp ? 'transparent' : '#fff'};" srcdoc="${srcdoc}"></iframe>`;
+  });
+}
+
+function toggleCampaignBulkApprove(idx, lang) {
+  const item = _campaign && _campaign.items[idx];
+  if(!item) return;
+  item.approvalDoneByLang = item.approvalDoneByLang || {};
+  if(item.approvalDoneByLang[lang]) {
+    delete item.approvalDoneByLang[lang];
+  } else {
+    const me = authCurrentUser();
+    item.approvalDoneByLang[lang] = { by: me ? me.email : null, at: Date.now() };
+  }
+  scheduleCampaignAutosave();
+  renderCampaignBulkApproval();
+}
+
+function renderCampaignGrid(item) {
+  const table = document.getElementById('campaignItemTable');
+  const langs = item.langs || [];
+  // colgroup, thead e tbody precisam ser montados numa ÚNICA atribuição a table.innerHTML —
+  // setar cada um separado (ex: só colgroup.innerHTML) faz a próxima atribuição de
+  // table.innerHTML apagar o colgroup junto, já que ele também é filho da table.
+  const colgroup = `<colgroup><col style="width:28px;"><col style="width:70px;"><col style="width:220px;">${langs.map(() => '<col style="width:200px;">').join('')}</colgroup>`;
+  const thead = `<thead><tr>
+    <th class="rn"></th><th class="cid">ID</th><th class="src">Origin</th>
+    ${langs.map(l => `<th class="tl">${escHtml(l)}</th>`).join('')}
+  </tr></thead>`;
+  const rows = item.rows || [];
+  // Push não vem de upload de HTML — não existe "origem" pra extrair, então essa
+  // coluna precisa ser editável (a pessoa escreve o texto original ali mesmo).
+  // Email/in-app continuam com a origem travada (vem do HTML tageado).
+  const originEditable = item.type === 'push';
+  const tbody = '<tbody>' + rows.map((row, ri) => `
+    <tr>
+      <td class="rn">${ri + 1}</td>
+      <td class="cid">${escHtml(row.label || row.id)}</td>
+      <td class="src"><textarea rows="1" ${originEditable ? `oninput="setCampaignOrigin(${ri},this.value)"` : 'readonly'}>${escHtml(row.src)}</textarea></td>
+      ${langs.map(l => `<td class="tl tl-cell${!(row.translations[l] || '').trim() ? ' tl-missing' : ''}"><textarea rows="1" oninput="setCampaignCell(${ri},'${escJsAttr(l)}',this.value)">${escHtml(row.translations[l] || '')}</textarea></td>`).join('')}
+    </tr>
+  `).join('') + '</tbody>';
+  table.innerHTML = colgroup + thead + tbody;
+}
+
+function setCampaignOrigin(ri, value) {
+  const item = _campaign.items[_campaignItemIndex];
+  if(!item || !item.rows[ri]) return;
+  item.rows[ri].src = value;
+  scheduleCampaignAutosave();
+  renderCampaignPreview(item, item._activeLang);
+}
+
+function setCampaignCell(ri, lang, value) {
+  const item = _campaign.items[_campaignItemIndex];
+  if(!item || !item.rows[ri]) return;
+  item.rows[ri].translations[lang] = value;
+  scheduleCampaignAutosave();
+  updateCampaignPreviewCell(item, item.rows[ri], lang);
+}
+
+function renderCampaignLangBar(item) {
+  const bar = document.getElementById('campaignItemLbar');
+  const langs = item.langs || [];
+  const origLangName = item.origin ? (COUNTRIES.find(c => c.code === item.origin)?.lang) : null;
+  const all = [];
+  if(origLangName) all.push({ lang: origLangName, isOrig: true });
+  langs.forEach(l => all.push({ lang: l, isOrig: false }));
+  const activeLang = item._activeLang || (all[0] && all[0].lang);
+  bar.innerHTML = all.map(o => `<button class="ltab ${o.isOrig ? 'orig-tab' : ''} ${o.lang === activeLang ? 'active' : ''}" onclick="setCampaignActiveLang('${escJsAttr(o.lang)}')">${escHtml(o.lang)}</button>`).join('');
+}
+
+function setCampaignActiveLang(lang) {
+  const item = _campaign.items[_campaignItemIndex];
+  if(!item) return;
+  item._activeLang = lang;
+  renderCampaignLangBar(item);
+  renderCampaignPreview(item, lang);
+}
+
+// Injeta um listener leve de "atualiza esse texto aí" no HTML do preview — sem isso,
+// cada tecla digitada reconstruía o <iframe> inteiro do zero (srcdoc novo = navegação
+// completa do iframe = piscada branca a cada letra). Com o listener, só o PRIMEIRO
+// render de um item/idioma cria o iframe; toda tecla depois só manda um postMessage
+// pra trocar o texto de um <span data-tid="..."> já existente, sem recarregar nada —
+// mesmo truque que o editor clássico já usa há tempos (updatePreviewText/'vf').
+function injectCampaignLiveUpdateScript(html) {
+  const sc = '<scr' + 'ipt>', scEnd = '</scr' + 'ipt>';
+  const script = sc + `(function(){
+    function reportHeight(){ var h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight,300); window.parent.postMessage({type:'camp-height',height:h},'*'); }
+    window.addEventListener('load', function(){ setTimeout(reportHeight, 60); });
+    window.addEventListener('message', function(e){
+      if(!e.data || e.data.type!=='camp-update') return;
+      var el = document.querySelector('[data-tid="'+e.data.tid+'"]');
+      if(!el) return;
+      if(el.classList.contains('braze-img-wrap')){
+        var img = el.querySelector('img');
+        if(img){ img.src = e.data.text || e.data.src; return; }
+      }
+      var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+      var node = walker.nextNode();
+      if(node) node.textContent = e.data.text || e.data.src;
+      else el.textContent = e.data.text || e.data.src;
+      setTimeout(reportHeight, 30);
+    });
+  })();` + scEnd;
+  return html.includes('</body>') ? html.replace('</body>', script + '</body>') : html + script;
+}
+
+let _campPreviewLoadedKey = null; // identifica QUAL item+idioma está carregado no iframe persistente agora
+
+// Atualização "barata" pra digitação — só troca o texto dentro do iframe JÁ carregado
+// via postMessage, sem reconstruir nada. Cai pro render completo (renderCampaignPreview)
+// só quando ainda não tem iframe carregado pra esse item/idioma específico.
+function updateCampaignPreviewCell(item, row, lang) {
+  if(item.type === 'push') { renderCampaignPreview(item, item._activeLang); return; } // sem iframe aqui, é só DOM simples — redesenhar direto não pisca
+  const viewLang = item._activeLang || (item.langs && item.langs[0]) || null;
+  if(lang !== viewLang) return; // editando um idioma que não é o que o preview está mostrando agora — nada muda na tela
+  const key = item.id + '::' + (viewLang || '');
+  const iframe = document.getElementById('campaignPreviewFrame');
+  if(!iframe || !iframe.contentWindow || _campPreviewLoadedKey !== key) {
+    renderCampaignPreview(item, viewLang); // primeira vez pra esse item/idioma — precisa montar o iframe uma vez
+    return;
+  }
+  iframe.contentWindow.postMessage({ type: 'camp-update', tid: row.id, text: row.translations[lang] || row.src, src: row.src }, '*');
+}
+
+function renderCampaignPreview(item, lang) {
+  const wrap = document.getElementById('campaignItemPreview');
+  if(!wrap) return;
+  if(item.type === 'push') {
+    _campPreviewLoadedKey = null;
+    const titleRow = item.rows.find(r => r.id === 'id1');
+    const bodyRow = item.rows.find(r => r.id === 'id2');
+    const origLangName = item.origin ? COUNTRIES.find(c => c.code === item.origin)?.lang : null;
+    const isOrig = !lang || lang === origLangName;
+    const title = isOrig ? (titleRow?.src || '') : (titleRow?.translations[lang] || titleRow?.src || '');
+    const body = isOrig ? (bodyRow?.src || '') : (bodyRow?.translations[lang] || bodyRow?.src || '');
+    wrap.innerHTML = `
+      <div style="max-width:380px;margin:40px auto 0;background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 16px rgba(0,0,0,.12);display:flex;gap:12px;">
+        <div style="width:44px;height:44px;border-radius:12px;background:#d8385e;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;">🔔</div>
+        <div style="min-width:0;">
+          <div style="font-weight:700;font-size:14px;color:#000;margin-bottom:2px;">${escHtml(title) || '<em style="color:#aaa;">No title yet</em>'}</div>
+          <div style="font-size:13px;color:#333;line-height:1.4;">${escHtml(body) || '<em style="color:#aaa;">No body yet</em>'}</div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  if(!S.rawHtml) { _campPreviewLoadedKey = null; wrap.innerHTML = `<p style="text-align:center;color:var(--text3);font-size:12px;margin-top:40px;">No HTML uploaded.</p>`; return; }
+  const html = injectCampaignLiveUpdateScript(buildPreviewHtml(lang));
+  const srcdoc = html.replace(/"/g, '&quot;');
+  const isInapp = item.type === 'inapp';
+  wrap.innerHTML = `<iframe id="campaignPreviewFrame" style="width:100%;height:560px;border:none;border-radius:12px;background:${isInapp ? 'transparent' : '#fff'};${isInapp ? '' : 'box-shadow:0 2px 12px rgba(0,0,0,.08);'}" srcdoc="${srcdoc}"></iframe>`;
+  _campPreviewLoadedKey = item.id + '::' + (lang || '');
+}
+
+// ── Content — modal único com 3 abas, lista o que já existe de cada tipo e
+//    deixa adicionar um novo (com origem + países-alvo, igual ao wizard clássico). ──
+let _manageContentTab = 'email';
+let _addItemState = { html: null, htmlName: null, origin: '', targets: [] };
+let _addItemStep = 1; // formulário de adicionar item é faseado — 1 passo por vez
+
+function manageContentTypeLabel(type) {
+  return type === 'email' ? 'emails' : type === 'inapp' ? 'in-app messages' : 'push notifications';
+}
+
+function resetAddItemState() {
+  _addItemState = { html: null, htmlName: null, origin: '', targets: [] };
+  _addItemStep = 1;
+}
+
+// forceType: quando vem do clique na barra de tipos lá em cima (Email/In-app/Push),
+// já abre direto naquela aba — sem isso, sempre abriria na aba do item ativo no momento.
+function openManageContentModal(forceType) {
+  if(!_campaign) return;
+  _manageContentTab = forceType || _campaignActiveType || 'email';
+  resetAddItemState();
+  document.getElementById('manageContentModal').style.display = 'flex';
+  renderManageContentModal();
+}
+function closeManageContentModal() {
+  document.getElementById('manageContentModal').style.display = 'none';
+}
+function switchManageContentTab(type) {
+  _manageContentTab = type;
+  resetAddItemState();
+  renderManageContentModal();
+}
+
+function renderManageContentModal() {
+  const types = ['email', 'inapp', 'push'];
+  document.querySelectorAll('#manageContentTabs .dash-sort-btn').forEach((b, i) => {
+    b.classList.toggle('active', types[i] === _manageContentTab);
+  });
+  renderManageContentList();
+  renderManageContentAddArea();
+}
+
+function renderManageContentList() {
+  const wrap = document.getElementById('manageContentList');
+  if(!wrap || !_campaign) return;
+  const items = (_campaign.items || []).map((it, i) => ({ it, i })).filter(x => x.it.type === _manageContentTab);
+  if(!items.length) {
+    wrap.innerHTML = `<p style="font-size:12px;color:var(--text3);margin:0;">No ${manageContentTypeLabel(_manageContentTab)} added yet.</p>`;
+    return;
+  }
+  wrap.innerHTML = items.map(({ it, i }) => `
+    <div class="member-row">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">${escHtml(it.name)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${(it.langs || []).length} language(s)${(it.langs || []).length ? ': ' + it.langs.map(escHtml).join(', ') : ''}</div>
+      </div>
+      <button class="btn-back" style="padding:6px 12px;font-size:11.5px;" onclick="openItemFromModal(${i})">Open</button>
+      <button class="btn-danger" style="padding:6px 10px;font-size:11.5px;" onclick="deleteContentItem(${i})">Remove</button>
+    </div>
+  `).join('');
+}
+
+function openItemFromModal(i) {
+  closeManageContentModal();
+  openCampaignItemEdit(i);
+}
+
+function deleteContentItem(i) {
+  if(!_campaign || !_campaign.items[i]) return;
+  _pendingDeleteContentIdx = i;
+  _pendingDeleteKind = 'contentItem';
+  const item = _campaign.items[i];
+  document.getElementById('deleteConfirmTitle').textContent = 'Remove content?';
+  document.getElementById('deleteConfirmMsg').innerHTML = `Remove <strong>${escHtml(item.name)}</strong> from this project? This cannot be undone.`;
+  document.getElementById('deleteConfirmModal').style.display = 'flex';
+}
+
+function confirmContentItemDelete() {
+  const i = _pendingDeleteContentIdx;
+  if(!_campaign || i < 0 || !_campaign.items[i]) { closeDeleteConfirmModal(); return; }
+  _campaign.items.splice(i, 1);
+  if(_campaignItemIndex === i) { _campaignItemIndex = -1; _campaignViewMode = 'gallery'; }
+  else if(_campaignItemIndex > i) _campaignItemIndex--;
+  saveCampaignProject();
+  closeDeleteConfirmModal();
+  renderCampaignTabs();
+  renderCampaignMain();
+  renderManageContentModal();
+}
+
+// Formulário faseado — um passo por vez (igual ao wizard clássico: Origin → Targets),
+// em vez de mostrar upload+origem+destino tudo junto de uma vez só. Email/in-app têm
+// um passo a mais no início (subir o HTML); push começa direto na origem.
+function addItemTotalSteps() {
+  return _manageContentTab === 'push' ? 2 : 3;
+}
+function addItemStepKind() {
+  const needsHtml = _manageContentTab !== 'push';
+  if(needsHtml) return _addItemStep === 1 ? 'html' : _addItemStep === 2 ? 'origin' : 'targets';
+  return _addItemStep === 1 ? 'origin' : 'targets';
+}
+function addItemNextStep() {
+  const total = addItemTotalSteps();
+  if(_addItemStep < total) _addItemStep++;
+  renderManageContentAddArea();
+}
+function addItemPrevStep() {
+  if(_addItemStep > 1) { _addItemStep--; renderManageContentAddArea(); }
+}
+
+function renderManageContentAddArea() {
+  const wrap = document.getElementById('manageContentAddArea');
+  if(!wrap) return;
+  const type = _manageContentTab;
+  const typeSingular = manageContentTypeLabel(type).replace(/s$/, '');
+  const total = addItemTotalSteps();
+  const kind = addItemStepKind();
+  const isFirstStep = _addItemStep === 1;
+  let body = '';
+
+  if(kind === 'html') {
+    body = `
+      <input type="file" id="addItemHtmlInput" accept=".html,.htm" style="display:none" onchange="onAddItemHtmlFile(this.files[0])">
+      <button class="btn-next" onclick="document.getElementById('addItemHtmlInput').click()" style="margin-bottom:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V3m0 0l-4 4m4-4l4 4"/></svg>
+        Select ${type === 'inapp' ? 'in-app' : 'email'} HTML
+      </button>
+      ${_addItemState.htmlName ? `<div class="file-ok" style="margin-bottom:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg><span style="font-size:12px;">${escHtml(_addItemState.htmlName)}</span></div>` : ''}
+      <button class="btn-next" style="margin-top:12px;width:100%;" ${!_addItemState.html ? 'disabled' : ''} onclick="addItemNextStep()">Continue</button>
+    `;
+  } else if(kind === 'origin') {
+    const originOptions = `<option value="" disabled ${!_addItemState.origin ? 'selected' : ''}>Select…</option>` +
+      COUNTRIES.map(c => `<option value="${c.code}" ${_addItemState.origin === c.code ? 'selected' : ''}>${c.flag} ${escHtml(c.name)} (${c.lang})</option>`).join('');
+    body = `
+      <div class="field" style="margin-bottom:0;">
+        <label>Origin language</label>
+        <select id="addItemOriginSelect" onchange="setAddItemOrigin(this.value)">${originOptions}</select>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        ${!isFirstStep ? `<button class="btn-back" style="flex:1;" onclick="addItemPrevStep()">← Back</button>` : ''}
+        <button class="btn-next" style="flex:1;margin-top:0;" ${!_addItemState.origin ? 'disabled' : ''} onclick="addItemNextStep()">Continue</button>
+      </div>
+    `;
+  } else { // targets — último passo
+    body = `
+      <div class="field" style="margin-bottom:0;">
+        <label>Target countries</label>
+        <div id="addItemTargets" class="folder-row" style="margin-top:6px;"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button class="btn-back" style="flex:1;" onclick="addItemPrevStep()">← Back</button>
+        <button class="btn-next" id="addItemConfirmBtn" style="flex:1;margin-top:0;" ${!_addItemState.targets.length ? 'disabled' : ''} onclick="confirmAddItem()">Add ${escHtml(typeSingular)}</button>
+      </div>
+    `;
+  }
+
+  wrap.innerHTML = `
+    <div style="border-top:1px solid var(--border);padding-top:16px;">
+      <div class="sec-lbl">Add new ${escHtml(typeSingular)} · Step ${_addItemStep} of ${total}</div>
+      <div style="margin-top:10px;">${body}</div>
+    </div>
+  `;
+  if(kind === 'targets') renderAddItemTargets();
+}
+
+function setAddItemOrigin(code) {
+  _addItemState.origin = code;
+  _addItemState.targets = _addItemState.targets.filter(c => c !== code);
+  renderManageContentAddArea();
+}
+
+function renderAddItemTargets() {
+  const el = document.getElementById('addItemTargets');
+  if(!el) return;
+  const available = COUNTRIES.filter(c => c.code !== _addItemState.origin);
+  el.innerHTML = available.map(c => `
+    <button type="button" class="folder-chip ${_addItemState.targets.includes(c.code) ? 'active' : ''}" onclick="toggleAddItemTarget('${c.code}')">${c.flag} ${escHtml(c.name)}</button>
+  `).join('');
+}
+
+function toggleAddItemTarget(code) {
+  const i = _addItemState.targets.indexOf(code);
+  if(i >= 0) _addItemState.targets.splice(i, 1); else _addItemState.targets.push(code);
+  renderManageContentAddArea();
+}
+
+function onAddItemHtmlFile(f) {
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    _addItemState.html = e.target.result;
+    _addItemState.htmlName = f.name;
+    renderManageContentAddArea();
+  };
+  r.readAsText(f);
+}
+
+function confirmAddItem() {
+  if(!_campaign || !_addItemState.origin || !_addItemState.targets.length) return;
+  const type = _manageContentTab;
+  if(type !== 'push' && !_addItemState.html) return;
+
+  const targetLangs = [...new Set(_addItemState.targets
+    .map(code => COUNTRIES.find(c => c.code === code))
+    .filter(Boolean)
+    .flatMap(c => expandLang(c.lang)))];
+
+  _campaign.items = _campaign.items || [];
+  const n = _campaign.items.filter(x => x.type === type).length + 1;
+  let item;
+
+  if(type === 'push') {
+    item = {
+      id: 'item_' + Date.now(), type: 'push', name: 'Push ' + n, origin: _addItemState.origin,
+      langs: targetLangs,
+      rows: [
+        { id: 'id1', label: 'Title', src: '', isImg: false, translations: Object.fromEntries(targetLangs.map(l => [l, ''])) },
+        { id: 'id2', label: 'Body', src: '', isImg: false, translations: Object.fromEntries(targetLangs.map(l => [l, ''])) }
+      ]
+    };
+  } else {
+    // Empresta extractStr() (motor de e-mail) por um instante só pra extrair textos/imagens —
+    // mesmas regras de sempre (ignora imagem com src Liquid, ícone de CTA em link, etc.).
+    S.rawHtml = _addItemState.html;
+    S.strings = [];
+    extractStr();
+    const rows = S.strings.map((s, i) => ({
+      id: 'id' + (i + 1), src: s.src, isImg: !!s.isImg, imgTag: s.imgTag || null,
+      translations: Object.fromEntries(targetLangs.map(l => [l, '']))
+    }));
+    item = {
+      id: 'item_' + Date.now(), type,
+      name: (type === 'inapp' ? 'In-app ' : 'Email ') + n,
+      rawHtml: _addItemState.html, origin: _addItemState.origin, langs: targetLangs, rows
+    };
+  }
+
+  _campaign.items.push(item);
+  _campaignItemIndex = _campaign.items.length - 1;
+  _campaignViewMode = 'edit'; // acabou de criar — abre direto pra preencher as traduções
+  _campaignActiveType = type;
+  resetAddItemState();
+  saveCampaignProject();
+  closeManageContentModal();
+  renderCampaignTabs();
+  renderCampaignMain();
+}
+
+// ── Upload de CSV pro item ativo ────────────────────────────────────────────
+function openItemCsvModal() {
+  const item = _campaign && _campaign.items[_campaignItemIndex];
+  if(!item) return;
+  document.getElementById('itemCsvSub').textContent = `Update translations for "${item.name}" from a CSV/XLSX.`;
+  document.getElementById('itemCsvModal').style.display = 'flex';
+}
+function closeItemCsvModal() {
+  document.getElementById('itemCsvModal').style.display = 'none';
+}
+
+function onItemCsvFile(f) {
+  if(!f) return;
+  const isXlsx = /\.xlsx?$/i.test(f.name);
+  const r = new FileReader();
+  r.onload = e => {
+    let csvText;
+    if(isXlsx) {
+      if(typeof XLSX === 'undefined') { showSyncWarning('SheetJS not loaded.'); return; }
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        csvText = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+      } catch(err) { showSyncWarning('Error reading XLSX: ' + err.message); return; }
+    } else {
+      csvText = e.target.result.replace(/^﻿/, '');
+    }
+    applyCsvToCampaignItem(csvText);
+  };
+  if(isXlsx) r.readAsArrayBuffer(f); else r.readAsText(f);
+  document.getElementById('itemCsvInput').value = '';
+}
+
+function applyCsvToCampaignItem(csvText) {
+  const item = _campaign && _campaign.items[_campaignItemIndex];
+  if(!item) return;
+  const parsed = parseBrazeCsv(csvText);
+  if(!parsed || !parsed.langs.length) {
+    showCsvUpdateErrorModal('Could not read that file as a translations CSV/XLSX — check that it has language columns starting from the 3rd column.');
+    return;
+  }
+  const allCsvIds = new Set();
+  Object.values(parsed.byLang).forEach(rows => rows.forEach(r => allCsvIds.add(r.id)));
+  if(!allCsvIds.size) {
+    showCsvUpdateErrorModal(`That file doesn't look like a translations CSV — no rows starting with an id (like id1, id2…) were found.`);
+    return;
+  }
+
+  parsed.langs.forEach(l => { if(!item.langs.includes(l)) item.langs.push(l); });
+
+  const rowById = {};
+  item.rows.forEach(r => rowById[r.id] = r);
+  let updatedCells = 0;
+  parsed.langs.forEach(lang => {
+    (parsed.byLang[lang] || []).forEach(r => {
+      const row = rowById[r.id];
+      if(row) { row.translations[lang] = r.tl; updatedCells++; }
+    });
+  });
+
+  if(!updatedCells) {
+    showCsvUpdateErrorModal(`None of the id(s) in that CSV matched this item's ids (${item.rows.map(r => r.id).join(', ')}).`);
+    return;
+  }
+
+  saveCampaignProject();
+  renderCampaignGrid(item);
+  renderCampaignLangBar(item);
+  renderCampaignPreview(item, item._activeLang);
+  closeItemCsvModal();
+  showSyncWarning(`Updated ${updatedCells} cell(s) from the CSV.`);
+}
+
+function dlItemCSV() {
+  const item = _campaign && _campaign.items[_campaignItemIndex];
+  if(!item) return;
+  const langs = item.langs || [];
+  const esc = s => `"${String(s || '').replace(/"/g, '""')}"`;
+  const nameRow = [item.name, '', ...langs.map(() => '')].map(esc).join(',');
+  const header = ['', 'Translation tags', ...langs].map(esc).join(',');
+  const rows = item.rows.map(r => [r.id, r.src, ...langs.map(l => r.translations[l] || '')].map(esc).join(','));
+  const csv = [nameRow, header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = item.name.replace(/[^a-z0-9]+/gi, '_') + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function renderDashUserList() {
@@ -2856,6 +3860,59 @@ function emailToName(email) {
   return local.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
 }
 
+// ── Progresso de tradução (X/Y ids traduzidos) — mostrado no Dashboard em TODO tipo
+// de projeto: solto (clássico), de campanha, e cada item dentro de uma campanha.
+// Um "id" conta como traduzido quando TODOS os idiomas-alvo daquele projeto/item têm
+// texto preenchido (mesmo critério já usado pra marcar célula "tl-missing" nas grades).
+function rowsTranslationStats(rows, langs) {
+  const total = (rows || []).length;
+  if(!total || !langs || !langs.length) return { total, done: 0 };
+  const done = rows.filter(r => langs.every(l => (r.translations ? r.translations[l] : r.tl) ? String(r.translations ? r.translations[l] : r.tl).trim() : false)).length;
+  return { total, done };
+}
+
+// Projeto clássico ("solto"): a tradução vive num CSV (string) já montado, não numa
+// lista de linhas estruturada — precisa reaproveitar o parser (parseBrazeCsv) que o
+// resto do app já usa pra ler esse mesmo formato.
+function projTranslationStats(p) {
+  if(!p.data || !p.data.csv) return null;
+  const parsed = parseBrazeCsv(p.data.csv);
+  if(!parsed || !parsed.langs || !parsed.langs.length) return null;
+  const firstLang = parsed.langs[0];
+  const rows = (parsed.byLang[firstLang] || []).map(r => ({ id: r.id }));
+  const total = rows.length;
+  if(!total) return null;
+  const done = rows.filter((r, i) => parsed.langs.every(l => (parsed.byLang[l][i]?.tl || '').trim())).length;
+  return { total, done };
+}
+
+function campaignItemTranslationStats(item) {
+  return rowsTranslationStats(item.rows, item.langs);
+}
+
+// Agrega o progresso de TODOS os itens (e-mails+in-apps+pushes) de uma campanha num
+// único X/Y — cada item pode ter seu próprio conjunto de idiomas-alvo.
+function campaignTranslationStats(p) {
+  const items = p.items || [];
+  if(!items.length) return null;
+  return items.reduce((acc, it) => {
+    const s = campaignItemTranslationStats(it);
+    return { total: acc.total + s.total, done: acc.done + s.done };
+  }, { total: 0, done: 0 });
+}
+
+// Badge "X/Y" reutilizado em toda lista do Dashboard — verde quando completo, âmbar
+// enquanto faltar algo. Retorna '' quando o projeto ainda não tem conteúdo/idiomas
+// configurados (nada pra mostrar ainda).
+function translationProgressBadgeHtml(stats, extraStyle) {
+  if(!stats || !stats.total) return '';
+  const complete = stats.done >= stats.total;
+  const style = complete
+    ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d;'
+    : 'background:#fffbeb;border-color:#fde68a;color:#92400e;';
+  return `<span class="lock-pill" style="${style}font-weight:700;${extraStyle || ''}">${stats.done}/${stats.total} translated</span>`;
+}
+
 // Resolve um código de idioma (ex: 'es-MX') pro primeiro país correspondente na lista COUNTRIES,
 // só pra exibir bandeira + nome no Dashboard.
 function projLangsRow(p) {
@@ -2903,7 +3960,13 @@ function personTagHtml(email) {
 // no momento e não serve pra pré-visualizar OUTROS projetos ao mesmo tempo no Dashboard).
 function projPreviewHtml(p) {
   if(!p.data || !p.data.html) return null;
-  return p.data.html.replace(/\{%translation\s+\S+?%\}/g, '').replace(/\{%endtranslation%\}/g, '');
+  let html = p.data.html.replace(/\{%translation\s+\S+?%\}/g, '').replace(/\{%endtranslation%\}/g, '');
+  html = replaceLiquidPlaceholders(html);
+  // Mesma tag discreta com quebra de linha usada nos outros previews — sem isso,
+  // {% if/else/endif %} cru aparecia na miniatura do card, podendo até juntar
+  // conteúdo que devia estar em blocos separados numa linha só. injectCondStyle traz
+  // o CSS da tag pra dentro deste iframe — sem ele a tag aparece sem estilo nenhum.
+  return injectCondStyle(annotateConditionals(renderFooterPlaceholder(html)));
 }
 
 function projPreviewBoxHtml(p) {
@@ -2942,7 +4005,8 @@ function projRowHtml(p, isOwner) {
   }
   const lastEdited = p.updatedAt ? ` · Last edited ${relativeTime(p.updatedAt)}` : '';
   const isApprover = !isOwner && (p.approvers || []).some(e => e.toLowerCase() === me.email.toLowerCase());
-  const badges = `${lockBadge}${isApprover && !reviewers.length ? `<span class="lock-pill mine" style="background:#f5f3ff;border-color:#c4b5fd;color:#6d28d9;">You're an approver</span>` : ''}${approvingBadge}`;
+  const progressBadge = translationProgressBadgeHtml(projTranslationStats(p));
+  const badges = `${progressBadge}${lockBadge}${isApprover && !reviewers.length ? `<span class="lock-pill mine" style="background:#f5f3ff;border-color:#c4b5fd;color:#6d28d9;">You're an approver</span>` : ''}${approvingBadge}`;
   return `
     <div class="proj-row">
       <div class="proj-body">
@@ -2966,6 +4030,7 @@ function projRowHtml(p, isOwner) {
         ${isApprover ? `<button class="btn-go" style="background:#6d28d9;" ${locked ? 'disabled' : ''} onclick="approverOpenProject('${p.id}')">Approve copies</button>` : ''}
         ${!isApprover ? `<button class="btn-go" id="openBtn-${p.id}" ${(locked && !lockedByMe) || reviewers.length ? 'disabled' : ''} onclick="projOpen('${p.id}', this)">Open Project</button>` : ''}
         ${isOwner ? `<button class="btn-danger" onclick="projDelete('${p.id}')">Delete</button>` : ''}
+        ${!isOwner ? `<button class="btn-back" onclick="leaveSharedProject('${p.id}')">Leave project</button>` : ''}
       </div>
     </div>
   `;
@@ -2973,12 +4038,20 @@ function projRowHtml(p, isOwner) {
 
 let _pendingProjectFolder = null; // pasta escolhida no modal, aplicada quando o projeto for salvo (ver projSaveOnBuild)
 let _newProjectFolderChip = null; // qual chip está selecionado no modal, antes de confirmar
-let _newProjectFolderOnDone = null; // o que fazer depois de fechar o modal — difere entre "New project" e "Continue editing"
+let _newProjectFolderOnDone = null; // o que fazer depois de fechar o modal (entra no wizard de "New project")
 
 function projCreate() {
   currentProjectId = null; // ESSENCIAL: sem isso, projSaveOnBuild sobrescreve o último projeto aberto
   _openedFromDashboard = false;
   openNewProjectFolderModal(() => enterWizardForProject());
+}
+
+function enterWizardForProject() {
+  document.getElementById('dashboardScreen').style.display = 'none';
+  document.getElementById('appBody').style.display = '';
+  document.getElementById('hdrBar').style.display = '';
+  document.getElementById('dashBtn').classList.remove('active');
+  goTo(1);
 }
 
 // Pergunta em qual pasta o projeto novo deve entrar ANTES de começar o upload — tanto
@@ -3150,161 +4223,11 @@ async function projOpen(id, btn) {
     document.getElementById('dashBtn').classList.remove('active');
     restoreProjectContent(p.data);
   } else {
-    // Projeto antigo, criado antes de salvar o conteúdo — cai no fluxo manual de upload.
-    enterWizardForProject(p);
-  }
-}
-
-// Abre a página separada de "Continue editing" (upload manual de HTML tageado + CSV),
-// acessível pelo botão "Edit an existing project" no Dashboard. Pergunta a pasta
-// ANTES, igual ao fluxo de "New project" — mesmo modal, mesma lista de pastas.
-// Abre a tela de "Continue editing" pedindo primeiro pra escolher o MODO — "Start
-// from scratch" (só HTML, idiomas escolhidos do zero) ou "Edit an uploaded project"
-// (HTML + CSV/XLSX já preenchido) — e só DEPOIS pergunta a pasta, igual ao "New project".
-function goToContinueEditing() {
-  currentProjectId = null; // ESSENCIAL: sem isso, sobrescreve o último projeto aberto ao salvar
-  document.getElementById('dashboardScreen').style.display = 'none';
-  document.getElementById('appBody').style.display = '';
-  document.getElementById('hdrBar').style.display = 'none';
-  document.getElementById('dashBtn').classList.remove('active');
-  PAGES.forEach(id => document.getElementById(id)?.classList.remove('active'));
-  document.getElementById('pageContinue').classList.add('active');
-  backToContinueChoice();
-}
-
-function backToContinueChoice() {
-  document.getElementById('continueChoiceCard').style.display = '';
-  document.getElementById('cardImport').style.display = 'none';
-  document.getElementById('cardScratchImport').style.display = 'none';
-}
-
-// Depois de escolher o modo, pergunta a pasta (mesmo modal do "New project") e só
-// então revela o card de upload certo pro modo escolhido.
-function chooseContinueMode(mode) {
-  openNewProjectFolderModal(() => {
-    document.getElementById('continueChoiceCard').style.display = 'none';
-    if(mode === 'scratch') {
-      document.getElementById('cardScratchImport').style.display = '';
-    } else {
-      document.getElementById('cardImport').style.display = '';
-      populateImportProjectPicker();
-    }
-  });
-}
-
-// Lista os projetos que a pessoa já tem na plataforma (com HTML tageado salvo) pra
-// escolher direto, sem precisar re-fazer upload do HTML — só falta o CSV/XLSX preenchido.
-function populateImportProjectPicker() {
-  const me = authCurrentUser();
-  const sel = document.getElementById('importProjectPicker');
-  const mine = projGetAll().filter(p => p.owner.toLowerCase() === me.email.toLowerCase() && p.data && p.data.html);
-  sel.innerHTML = `<option value="" selected disabled>Choose a project…</option>` +
-    mine.map(p => `<option value="${p.id}">${p.name}${p.folder ? ' — 📁 ' + p.folder : ''}</option>`).join('') +
-    `<option value="__manual__">Or upload an HTML file instead</option>`;
-  IMP.html = null; IMP.htmlName = '';
-  document.getElementById('manualHtmlUploadBlock').style.display = 'none';
-  document.getElementById('importHtmlOk').classList.add('hidden');
-  document.getElementById('importHtmlNoTagsError').classList.remove('show');
-  checkImportReady();
-}
-
-function onImportProjectPick(value) {
-  const errEl = document.getElementById('importHtmlNoTagsError');
-  if(value === '__manual__') {
-    IMP.html = null; IMP.htmlName = '';
-    currentProjectId = null; // upload manual não sabe qual projeto atualizar — vira um novo
-    document.getElementById('manualHtmlUploadBlock').style.display = '';
-    document.getElementById('importHtmlOk').classList.add('hidden');
-    if(errEl) errEl.classList.remove('show');
-    checkImportReady();
-    return;
-  }
-  document.getElementById('manualHtmlUploadBlock').style.display = 'none';
-  if(errEl) errEl.classList.remove('show');
-  const p = projGetAll().find(x => x.id === value);
-  if(!p || !p.data || !p.data.html) {
-    IMP.html = null;
-    currentProjectId = null;
-    document.getElementById('importHtmlOk').classList.add('hidden');
-    checkImportReady();
-    return;
-  }
-  IMP.html = p.data.html;
-  IMP.htmlName = p.data.htmlName || (p.name + '.html');
-  // ESSENCIAL: sem isso, loadImport()/projSaveOnBuild() acham que é um projeto novo
-  // e criam OUTRO registro em vez de atualizar o mesmo projeto escolhido aqui.
-  currentProjectId = p.id;
-  document.getElementById('importHtmlOk').classList.remove('hidden');
-  document.getElementById('importHtmlTxt').textContent = `${p.name} — tagged HTML loaded`;
-  checkImportReady();
-}
-
-function onScratchHtml(f) {
-  if(!f) return;
-  const r = new FileReader();
-  r.onload = e => {
-    const html = e.target.result;
-    const hasTags = /\{%translation\s+id\d+%\}/.test(html);
-    const errEl = document.getElementById('scratchHtmlNoTagsError');
-    if(!hasTags) {
-      if(errEl) errEl.classList.add('show');
-      document.getElementById('scratchHtmlOk').classList.add('hidden');
-      document.getElementById('btnScratchContinue').disabled = true;
-      IMP.scratchHtml = null;
-      return;
-    }
-    if(errEl) errEl.classList.remove('show');
-    IMP.scratchHtml = html;
-    IMP.scratchHtmlName = f.name;
-    document.getElementById('scratchHtmlOk').classList.remove('hidden');
-    document.getElementById('scratchHtmlTxt').textContent = `${f.name} · ${(f.size/1024).toFixed(1)} KB`;
-    document.getElementById('btnScratchContinue').disabled = false;
-  };
-  r.readAsText(f);
-}
-
-function confirmStartFromScratch() {
-  if(!IMP.scratchHtml) return;
-  startFromScratchImport(IMP.scratchHtml, IMP.scratchHtmlName);
-}
-
-function enterWizardForProject(project) {
-  document.getElementById('dashboardScreen').style.display = 'none';
-  document.getElementById('appBody').style.display = '';
-  document.getElementById('hdrBar').style.display = '';
-  document.getElementById('dashBtn').classList.remove('active');
-  goTo(1);
-
-  if(project) {
-    // Projeto existente — manda direto pro fluxo "Continue editing", já destacado.
-    const cardImport = document.getElementById('cardImport');
-    const cardNovo = document.getElementById('cardNovo');
-    if(cardImport) {
-      cardImport.style.outline = '2px solid var(--green)';
-      cardImport.style.boxShadow = '0 0 0 4px rgba(15,110,60,.12)';
-      cardImport.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    if(cardNovo) cardNovo.style.opacity = '.55';
-
-    // Banner com o nome do projeto sendo continuado
-    let banner = document.getElementById('continueBanner');
-    if(!banner) {
-      banner = document.createElement('div');
-      banner.id = 'continueBanner';
-      banner.style.cssText = 'max-width:640px;margin:0 auto 16px;padding:10px 14px;background:var(--grn-bg);border:1px solid var(--grn-bd);border-radius:8px;font-size:12.5px;color:var(--green);font-weight:600;';
-      const target = document.querySelector('#page1 .cw.vcenter > div');
-      if(target) target.insertBefore(banner, target.firstChild);
-    }
-    banner.textContent = `Continuing: ${project.name} — select the tagged HTML + CSV for this project.`;
-    banner.style.display = '';
-  } else {
-    // Projeto novo — remove qualquer destaque/banner deixado de uma sessão anterior
-    const cardImport = document.getElementById('cardImport');
-    const cardNovo = document.getElementById('cardNovo');
-    if(cardImport){ cardImport.style.outline = ''; cardImport.style.boxShadow = ''; }
-    if(cardNovo) cardNovo.style.opacity = '';
-    const banner = document.getElementById('continueBanner');
-    if(banner) banner.style.display = 'none';
+    // Projeto antigo, criado antes da funcionalidade de salvar o conteúdo do projeto —
+    // não tem HTML/CSV salvo pra reabrir. Não há mais um fluxo manual de re-upload
+    // pra recuperar esses projetos legados; melhor avisar do que falhar em silêncio.
+    alert(`"${p.name}" was created before this tool started saving full project content, so there's nothing to reopen. Please recreate it as a new project.`);
+    resetBtn();
   }
 }
 
@@ -3324,10 +4247,32 @@ function projReleaseMine() {
 
 let _pendingDeleteId = null;
 
-function projDelete(id) {
-  _pendingDeleteId = id;
+// Tira a própria pessoa do sharedWith/approvers de um projeto que não é dela — some
+// da lista "Shared with me"/"To approve", sem mexer no projeto pra mais ninguém.
+async function leaveSharedProject(id) {
+  if(!confirm('Leave this project? You will lose access unless someone shares it with you again.')) return;
+  const me = authCurrentUser();
+  if(!me) return;
+  if(ghConfigured()) await ghPullProjects();
   const projects = projGetAll();
   const p = projects.find(x => x.id === id);
+  if(!p) return;
+  p.sharedWith = (p.sharedWith || []).filter(e => e.toLowerCase() !== me.email.toLowerCase());
+  p.approvers = (p.approvers || []).filter(e => e.toLowerCase() !== me.email.toLowerCase());
+  projSaveAll(projects);
+  renderDashboard();
+}
+
+let _pendingDeleteKind = 'project'; // 'project' | 'campaign' | 'contentItem' — o que confirmGenericDelete() executa
+let _pendingDeleteContentIdx = -1;   // só usado quando kind === 'contentItem'
+
+function projDelete(id) {
+  _pendingDeleteId = id;
+  _pendingDeleteKind = 'project';
+  const projects = projGetAll();
+  const p = projects.find(x => x.id === id);
+  document.getElementById('deleteConfirmTitle').textContent = 'Delete project?';
+  document.getElementById('deleteConfirmMsg').innerHTML = `Are you sure you want to delete <strong id="deleteProjName"></strong>? This action cannot be undone.`;
   const nameEl = document.getElementById('deleteProjName');
   if(nameEl) nameEl.textContent = p ? p.name : '';
   document.getElementById('deleteConfirmModal').style.display = 'flex';
@@ -3335,7 +4280,18 @@ function projDelete(id) {
 
 function closeDeleteConfirmModal() {
   _pendingDeleteId = null;
+  _pendingDeleteContentIdx = -1;
   document.getElementById('deleteConfirmModal').style.display = 'none';
+}
+
+// Único ponto de saída do modal genérico de delete — despacha pro fluxo certo conforme
+// _pendingDeleteKind. Usar um modal próprio (em vez de window.confirm()) pros deletes de
+// campanha/item de conteúdo também, já que window.confirm() pode ficar bloqueado ou não
+// aparecer em alguns navegadores/contextos de embed, fazendo o delete parecer quebrado.
+async function confirmGenericDelete() {
+  if(_pendingDeleteKind === 'campaign') return confirmCampaignDelete();
+  if(_pendingDeleteKind === 'contentItem') return confirmContentItemDelete();
+  return confirmProjDelete();
 }
 
 async function confirmProjDelete() {
@@ -3411,30 +4367,39 @@ function openShareModal(id) {
   const withAccess = allUsers.filter(u => roleOf(u));
   const withoutAccess = allUsers.filter(u => !roleOf(u));
 
+  const rowId = u => 'shareRow-' + u.email.replace(/[^a-zA-Z0-9]/g, '_');
   const accessRow = u => {
     const role = roleOf(u);
     return `
-      <div class="share-row">
+      <div class="share-row" id="${rowId(u)}">
         <div class="share-avatar" style="background:${avColorForEmail(u.email)}">${initials(u)}</div>
         <div class="share-identity">
           <div class="share-identity-name">${esc(authorName(u.email))} <span class="role-badge ${u.role}">${u.role}</span>${u.department ? departmentTagHtml(u.department) : ''}</div>
           <div class="share-identity-email">${esc(u.email)}</div>
         </div>
-        <select class="share-role-select" onchange="setMemberRole('${id}','${u.email}',this.value)">
+        <span class="share-saving" style="display:none;font-size:11px;color:var(--text3);align-items:center;gap:6px;white-space:nowrap;">
+          <span style="width:11px;height:11px;border-radius:50%;border:1.5px solid var(--border-s);border-top-color:var(--text2);animation:btnSpin .6s linear infinite;flex-shrink:0;"></span>
+          Saving…
+        </span>
+        <select class="share-role-select" onchange="setMemberRole('${id}','${u.email}',this.value,'${rowId(u)}')">
           <option value="editor" ${role==='editor'?'selected':''}>Editor</option>
           <option value="approver" ${role==='approver'?'selected':''}>Approver</option>
         </select>
-        <button class="share-remove-btn" title="Remove access" onclick="setMemberRole('${id}','${u.email}',null)">✕</button>
+        <button class="share-remove-btn" title="Remove access" onclick="setMemberRole('${id}','${u.email}',null,'${rowId(u)}')">✕</button>
       </div>`;
   };
   const addRow = u => `
-      <div class="share-row">
+      <div class="share-row" id="${rowId(u)}">
         <div class="share-avatar" style="background:${avColorForEmail(u.email)}">${initials(u)}</div>
         <div class="share-identity">
           <div class="share-identity-name">${esc(authorName(u.email))} <span class="role-badge ${u.role}">${u.role}</span>${u.department ? departmentTagHtml(u.department) : ''}</div>
           <div class="share-identity-email">${esc(u.email)}</div>
         </div>
-        <select class="share-role-select placeholder" onchange="setMemberRole('${id}','${u.email}',this.value)">
+        <span class="share-saving" style="display:none;font-size:11px;color:var(--text3);align-items:center;gap:6px;white-space:nowrap;">
+          <span style="width:11px;height:11px;border-radius:50%;border:1.5px solid var(--border-s);border-top-color:var(--text2);animation:btnSpin .6s linear infinite;flex-shrink:0;"></span>
+          Saving…
+        </span>
+        <select class="share-role-select placeholder" onchange="setMemberRole('${id}','${u.email}',this.value,'${rowId(u)}')">
           <option value="" selected disabled>Select role…</option>
           <option value="editor">Editor</option>
           <option value="approver">Approver</option>
@@ -3453,8 +4418,19 @@ function openShareModal(id) {
 // Approver sempre implica acesso (sharedWith) por baixo dos panos — é assim que o resto
 // do app (Dashboard, locks, Approval View) já distingue quem pode ver o quê — mas na UI
 // isso vira UM controle só, não duas caixinhas dependentes uma da outra.
-async function setMemberRole(projId, email, role) {
+async function setMemberRole(projId, email, role, rowId) {
   if(role === '') return; // opção placeholder ("Select role…") — não é uma escolha de verdade
+  // Mostra "Saving…" na hora — projSaveAll salva local na hora, mas o envio pra nuvem
+  // (ghMergeAndPushProjects) roda em segundo plano e pode levar alguns segundos; sem um
+  // sinal visual, a pessoa não sabia que precisava esperar antes de fechar o modal, e às
+  // vezes fechava rápido demais, achando que já tinha ido, mas ainda não tinha sincronizado.
+  const rowEl = rowId ? document.getElementById(rowId) : null;
+  if(rowEl) {
+    rowEl.querySelector('.share-saving').style.display = 'inline-flex';
+    rowEl.querySelector('.share-role-select').style.display = 'none';
+    const removeBtn = rowEl.querySelector('.share-remove-btn');
+    if(removeBtn) removeBtn.style.display = 'none';
+  }
   if(ghConfigured()) await ghPullProjects(); // ver comentário em confirmAssignFolder
   const projects = projGetAll();
   const p = projects.find(x => x.id === projId);
@@ -3476,6 +4452,7 @@ async function setMemberRole(projId, email, role) {
     }
   }
   projSaveAll(projects);
+  if(_pendingProjectsPush) { try { await _pendingProjectsPush; } catch(e) {} } // espera o envio pra nuvem terminar de verdade antes de tirar o "Saving…"
 
   if(role && role !== hadRole) {
     const me = authCurrentUser();
@@ -3483,7 +4460,7 @@ async function setMemberRole(projId, email, role) {
       ? `${me.email} made you an approver on "${p.name}". Review the copies whenever you're ready.`
       : `${me.email} shared "${p.name}" with you to edit.`);
   }
-  openShareModal(projId); // re-renderiza já refletindo o novo papel
+  openShareModal(projId); // re-renderiza já refletindo o novo papel (some com o "Saving…")
 }
 
 function closeShareModal() {
@@ -3716,7 +4693,6 @@ function goTo(step) {
       step===5
     );
   });
-  document.getElementById('pageContinue')?.classList.remove('active'); // só fica ativa via goToContinueEditing()
   // Breadcrumb page mapping
   const stepPageMap = {1:'home', 2:'origin', 3:'targets', 3.5:'images', 4:'confirm', 5:'edit'};
   updateBreadcrumb(stepPageMap[step] || 'home');
@@ -3748,15 +4724,9 @@ function resetAll() {
   S.approvalActivity = [];
   S.approvalDeletedIds = [];
   _imgPickHtml = null;
-  _imgTipShown = false;
   _openedFromDashboard = false; // reset — só é true quando restoreProjectContent liga
   _approverMode = false;
   S.allC = [...COUNTRIES];
-
-  // Reset import state
-  IMP.html = null;
-  IMP.htmlName = '';
-  IMP.csv = null;
 
   // Reset UI feedback on page 1
   const fileOk = document.getElementById('fileOk');
@@ -3766,22 +4736,6 @@ function resetAll() {
   document.getElementById('fileAlreadyTaggedError')?.classList.remove('show');
   const fi = document.getElementById('fi');
   if(fi) fi.value = '';
-
-  // Reset import page feedback
-  const importHtmlOk = document.getElementById('importHtmlOk');
-  if(importHtmlOk) importHtmlOk.classList.add('hidden');
-  const importCsvOk = document.getElementById('importCsvOk');
-  if(importCsvOk) importCsvOk.classList.add('hidden');
-  const btnImport = document.getElementById('btnImport');
-  if(btnImport) btnImport.disabled = true;
-  const fiIH = document.getElementById('fiImportHtml');
-  if(fiIH) fiIH.value = '';
-  const fiIC = document.getElementById('fiImportCsv');
-  if(fiIC) fiIC.value = '';
-  const errTags = document.getElementById('importHtmlNoTagsError');
-  if(errTags) errTags.classList.remove('show');
-  const errCsv = document.getElementById('importCsvDzError');
-  if(errCsv) errCsv.classList.remove('show');
 
   // Reset viewer
   const vEmpty = document.getElementById('vEmpty');
@@ -3800,18 +4754,6 @@ function resetAll() {
 }
 
 
-/* ═══════════ DROP ZONE SETUP ═══════════ */
-function setupDZ(dzId, inputId, handler) {
-  const dz = document.getElementById(dzId);
-  const inp = document.getElementById(inputId);
-  if(!dz || !inp) return;
-  dz.addEventListener('click', () => inp.click());
-  dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over');});
-  dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
-  dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('over');handler(e.dataTransfer.files[0]);});
-  inp.addEventListener('change', ()=>{ if(inp.files[0]) handler(inp.files[0]); });
-}
-
 document.addEventListener('DOMContentLoaded',()=>{
   // New project — HTML
   const fi = document.getElementById('fi');
@@ -3822,64 +4764,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     cardNovo.addEventListener('dragleave', ()=>cardNovo.style.outline='');
     cardNovo.addEventListener('drop', e=>{
       e.preventDefault();cardNovo.style.outline='';
-      // If HTML files, treat as HTML upload. If CSV, treat as CSV upload.
       const files = Array.from(e.dataTransfer.files);
       const htmlFiles = files.filter(f=>/\.html?$/i.test(f.name));
-      const csvFiles  = files.filter(f=>/\.csv$/i.test(f.name));
       if(htmlFiles.length) onFile(htmlFiles[0]);
-
-    });
-  }
-
-
-  // Continue editing — inline in home card
-  const fiH = document.getElementById('fiImportHtml');
-  if(fiH) fiH.addEventListener('change', () => {
-    if(fiH.files[0]) onImportHtml(fiH.files[0]);
-    fiH.value = ''; // reset so same file can be re-selected
-  });
-  const fiC = document.getElementById('fiImportCsv');
-  if(fiC) fiC.addEventListener('change', () => {
-    if(fiC.files[0]) onImportCsv(fiC.files[0]);
-    fiC.value = '';
-  });
-  setupDZ('importCsvDropZone', 'fiImportCsv', onImportCsv);
-  // "Start from scratch" — só HTML, sem CSV
-  const fiS = document.getElementById('fiScratchHtml');
-  if(fiS) fiS.addEventListener('change', () => {
-    if(fiS.files[0]) onScratchHtml(fiS.files[0]);
-    fiS.value = '';
-  });
-  // Drag-drop HTML onto the Continue Editing card
-  const cardImport = document.getElementById('cardImport');
-  if(cardImport){
-    cardImport.addEventListener('dragover', e=>{e.preventDefault();cardImport.style.outline='2px solid var(--green)';});
-    cardImport.addEventListener('dragleave', ()=>cardImport.style.outline='');
-    cardImport.addEventListener('drop', e=>{
-      e.preventDefault();cardImport.style.outline='';
-      const files = Array.from(e.dataTransfer.files);
-      const htmlFile = files.find(f=>/\.html?$/i.test(f.name));
-      const csvFile  = files.find(f=>/\.(csv|xlsx?)$/i.test(f.name));
-      if(htmlFile) onImportHtml(htmlFile);
-      if(csvFile)  onImportCsv(csvFile);
     });
   }
 });
-
-/* ═══════════ CSV MULTI-UPLOAD (new project page1) ═══════════ */
-
-// Detect lang from filename: look for _LANG.csv or _LANG_CODE.csv suffix
-// e.g. "template_fr-es_es.csv" → "es", "campaign_pt-BR.csv" → "pt-BR"
-function showDzError(errId) {
-  const el = document.getElementById(errId);
-  if(el) el.classList.add('show');
-  setTimeout(() => { if(el) el.classList.remove('show'); }, 5000);
-}
-
-function hideDzError(errId) {
-  const el = document.getElementById(errId);
-  if(el) el.classList.remove('show');
-}
 
 function isValidSpreadsheet(f) {
   return f && /\.(csv|xlsx?)$/i.test(f.name);
@@ -3950,368 +4840,98 @@ function parseBrazeCsv(text) {
   return { templateName, langs, byLang };
 }
 
-
-
-
-
-
-/* ═══════════ IMPORT (continue editing) ═══════════ */
-const IMP = { html: null, htmlName: '', csv: null, scratchHtml: null, scratchHtmlName: '' };
-
-function onImportHtml(f) {
+// Botão "Update from CSV" no editor — deixa a pessoa subir de novo uma planilha
+// preenchida (ex: veio da agência de tradução) e atualiza as células da grade já
+// aberta, casando por ID (a mesma chave que já vive tageada no HTML), sem precisar
+// refazer o wizard inteiro nem perder comentários/estado de aprovação já existentes.
+function onEditorCsvUpload(f) {
   if(!f) return;
-  const r=new FileReader();
-  r.onload=e=>{
-    IMP.html=e.target.result; IMP.htmlName=f.name;
-    const hasTags = /\{%translation\s+id\d+%\}/.test(IMP.html);
-    const errEl = document.getElementById('importHtmlNoTagsError');
-    if(!hasTags){
-      // Show error, hide success indicator, block the button
-      if(errEl) errEl.classList.add('show');
-      document.getElementById('importHtmlOk').classList.add('hidden');
-      document.getElementById('btnImport').disabled = true;
-      IMP.html = null; // reject the file
-      return;
-    }
-    if(errEl) errEl.classList.remove('show');
-    document.getElementById('importHtmlOk').classList.remove('hidden');
-    document.getElementById('importHtmlTxt').textContent=`${f.name} · ${(f.size/1024).toFixed(1)} KB`;
-    checkImportReady();
-  };
-  r.readAsText(f);
-}
-
-function onImportCsv(f) {
-  if(!f) return;
-  if(!isValidSpreadsheet(f)){ showDzError('importCsvDzError'); return; }
-  hideDzError('importCsvDzError');
+  if(!isValidSpreadsheet(f)) { showSyncWarning('Please upload a .csv or .xlsx file.'); return; }
   const isXlsx = /\.xlsx?$/i.test(f.name);
-  if(isXlsx){
-    const r = new FileReader();
-    r.onload = e => {
-      if(typeof XLSX === 'undefined'){ alert('SheetJS not loaded.'); return; }
+  const r = new FileReader();
+  r.onload = e => {
+    let csvText;
+    if(isXlsx) {
+      if(typeof XLSX === 'undefined') { showSyncWarning('SheetJS not loaded.'); return; }
       try {
         const wb = XLSX.read(e.target.result, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        // Convert to CSV verbatim — no aliases, no expansion, exactly what's in the cells
-        IMP.csv = XLSX.utils.sheet_to_csv(ws);
-      } catch(err) {
-        alert('Error reading XLSX: ' + err.message); return;
-      }
-      document.getElementById('importCsvOk').classList.remove('hidden');
-      document.getElementById('importCsvTxt').textContent = f.name;
-      checkImportReady();
-    };
-    r.readAsArrayBuffer(f);
-    return;
-  }
-  const r = new FileReader();
-  r.onload = e => {
-    IMP.csv = e.target.result.replace(/^\uFEFF/,'');
-    document.getElementById('importCsvOk').classList.remove('hidden');
-    document.getElementById('importCsvTxt').textContent = f.name;
-    checkImportReady();
-  };
-  r.readAsText(f);
-}
-
-function checkImportReady() {
-  document.getElementById('btnImport').disabled=!(IMP.html&&IMP.csv);
-}
-
-// Extrai um {id, src, isImg, imgTag} por {%translation idN%}...{%endtranslation%} —
-// usado tanto pelo import completo (HTML+CSV) quanto pelo "Start from scratch"
-// (só HTML, sem CSV — as traduções começam vazias e os idiomas são escolhidos
-// no assistente normal de Origin/Targets, não vêm do cabeçalho de um CSV).
-function parseTaggedHtmlRows(html) {
-  const tagRe = new RegExp('\\{%translation\\s+(id\\d+)%\\}([\\s\\S]*?)\\{%endtranslation%\\}', 'g');
-  const rows = [];
-  let m;
-  while((m = tagRe.exec(html)) !== null){
-    const id  = m[1];
-    const src = m[2]; // verbatim — no normalisation
-    const isImg = /^https?:\/\//.test(src.trim()) && !src.trim().includes(' ');
-    let imgTag = null;
-    if(isImg){
-      const srcIdx = html.indexOf(src.trim());
-      if(srcIdx !== -1){
-        let s = srcIdx; while(s > 0 && html[s] !== '<') s--;
-        let e = srcIdx; while(e < html.length && html[e] !== '>') e++;
-        if(/^<img[\s>]/i.test(html.slice(s, s+5))){
-          // A tag capturada aqui ainda tem a marcação {%translation%} DENTRO do
-          // atributo src (ex: src="{%translation id17%}https://.../original.png
-          // {%endtranslation%}") — é assim que fica salvo no HTML já tageado.
-          // Mas buildPreviewHtml() SEMPRE remove essas marcações do HTML antes de
-          // procurar onde inserir a troca de imagem por idioma — então guardar a
-          // tag com a marcação ainda dentro fazia essa busca nunca encontrar nada,
-          // e a imagem do idioma de origem ficava a mesma pra todo mundo. Guarda
-          // já sem a marcação, igual o HTML vai estar na hora da busca.
-          imgTag = html.slice(s, e+1)
-            .replace(/\{%translation\s+id\d+%\}/g, '')
-            .replace(/\{%endtranslation%\}/g, '');
-        }
-      }
-    }
-    rows.push({ id, src, isImg, imgTag });
-  }
-  return rows;
-}
-
-// "Start from scratch": a pessoa já tem um HTML tageado (de um export anterior, por
-// exemplo) mas NÃO tem um CSV preenchido — só quer recomeçar as traduções do zero,
-// escolhendo os idiomas pelo assistente normal (Origin → Targets), como um projeto
-// novo. Preenche S.strings (não S.csv.rows) pra buildCSV() montar tudo do zero na
-// hora de confirmar os idiomas, preservando os IDs originais das tags.
-function startFromScratchImport(html, filename) {
-  resetAll(); // zera qualquer sobra de um projeto anterior antes de montar o novo estado
-  S.rawHtml = html;
-  S.filename = filename;
-  S.csv.name = filename.replace(/\.html?$/i, '');
-  S.isImport = false; // false = passa pela tela de Targets (sem CSV pra derivar idiomas)
-  S.htmlAlreadyTagged = true; // não re-tagear ao salvar — este HTML já veio tageado
-  S.strings = parseTaggedHtmlRows(html).map(r => ({
-    id: r.id, src: r.src, display: toLiquidPlaceholder(r.src),
-    isStyle: false, outerKey: null, openTag: null, closeTag: null,
-    isImg: r.isImg, imgTag: r.imgTag,
-    isLiquidDefault: false, isLiquidFull: false, liquidToken: null
-  }));
-  goTo(2);
-}
-
-// Erro bloqueante (não é alert() nativo) mostrado quando os ids do CSV não batem
-// com os ids tageados no HTML pra esse país — pede pra ajustar o CSV e reenviar.
-// (Texto diferente pro mesmo id NÃO bloqueia mais — vira um aviso amarelo por
-// linha na tabela, ver _textMismatch/ackTextMismatch.)
-function showImportMismatchModal(missingInCsv, missingInHtml) {
-  const esc = s => String(s || '').replace(/</g, '&lt;');
-  const listHtml = (title, ids) => !ids.length ? '' : `
-    <div style="margin-bottom:8px;"><strong>${esc(title)} (${ids.length}):</strong><br>${ids.map(esc).join(', ')}</div>`;
-  document.getElementById('importMismatchDetail').innerHTML =
-    listHtml('Tagged in the HTML but missing from the CSV', missingInCsv) +
-    listHtml('In the CSV but not tagged in this HTML', missingInHtml);
-  document.getElementById('importMismatchModal').style.display = 'flex';
-}
-
-function closeImportMismatchModal() {
-  document.getElementById('importMismatchModal').style.display = 'none';
-}
-
-function loadImport() {
-  if(!IMP.html){ alert('No HTML uploaded.'); return; }
-  if(!IMP.csv){  alert('No CSV uploaded.');  return; }
-
-  // ── 1. Parse CSV verbatim ──────────────────────────────────────────────────
-  // Strip BOM, normalise line endings.
-  const raw = IMP.csv.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const lines = raw.split('\n').map(l => l.trimEnd()).filter(Boolean);
-  if(lines.length < 2){ alert('Invalid CSV — needs at least a header row and one data row.'); return; }
-
-  // Detect separator — pick a line likely to be real data either way.
-  const sepLine = lines[Math.min(2, lines.length - 1)];
-  const sep = sepLine.split(';').length > sepLine.split(',').length ? ';' : ',';
-
-  // Parse one line respecting quoted fields (comma sep) or plain split (semicolon)
-  const splitLine = line => {
-    if(sep === ';') return line.split(';');
-    const cols = []; let cell = '', q = false;
-    for(let i = 0; i < line.length; i++){
-      if(line[i] === '"'){
-        if(q && line[i+1] === '"'){ cell += '"'; i++; }
-        else q = !q;
-      } else if(line[i] === ',' && !q){
-        cols.push(cell); cell = '';
-      } else cell += line[i];
-    }
-    cols.push(cell);
-    // Strip surrounding quotes from every cell — verbatim content inside
-    return cols.map(c => c.replace(/^"|"$/g, ''));
-  };
-
-  // Nosso export próprio tem 3 linhas fixas (nome, cabeçalho, dados...), mas um
-  // CSV/XLSX preenchido a mão em Excel/Sheets costuma começar direto no cabeçalho
-  // (2 linhas: cabeçalho, dados...), sem a linha de nome. Assumir sempre 3 linhas
-  // fazia a primeira linha de dados de verdade ser lida como se fosse o cabeçalho -
-  // sumindo silenciosamente com a primeira tradução. Detecta onde está o cabeçalho
-  // de verdade (a linha cuja 2a coluna é literalmente "Translation tags").
-  const looksLikeHeader = cols => (cols[1] || '').trim().toLowerCase() === 'translation tags';
-  const row0Cols = splitLine(lines[0]);
-  const row1Cols = lines.length > 1 ? splitLine(lines[1]) : null;
-  let headerRowIdx;
-  if(row1Cols && looksLikeHeader(row1Cols)) headerRowIdx = 1;       // com linha de nome (nosso export)
-  else if(looksLikeHeader(row0Cols)) headerRowIdx = 0;               // sem linha de nome
-  else headerRowIdx = 1;                                             // não reconhecido - mantém o padrão antigo
-
-  if(lines.length <= headerRowIdx){ alert('Invalid CSV — no data rows found after the header.'); return; }
-
-  const templateName = headerRowIdx === 1 ? (splitLine(lines[0])[0] || IMP.htmlName.replace(/\.html?$/i, '')) : IMP.htmlName.replace(/\.html?$/i, '');
-  const headerCols   = splitLine(lines[headerRowIdx]); // ['', 'Translation tags', 'es-ES', 'de-DE', ...]
-
-  // Columns: index 0 = empty, index 1 = 'Translation tags', index 2+ = lang codes
-  // es-419 expands to es-CL + es-MX (same data, two columns)
-  const langCols = []; // [{lang, colIdx, srcLang}]
-  for(let i = 2; i < headerCols.length; i++){
-    const l = headerCols[i].trim();
-    if(!l) continue;
-    if(l === 'es-419'){
-      // Expand: one CSV column feeds two lang columns
-      langCols.push({ lang: 'es-CL', colIdx: i, srcLang: 'es-419' });
-      langCols.push({ lang: 'es-MX', colIdx: i, srcLang: 'es-419' });
+        csvText = XLSX.utils.sheet_to_csv(ws);
+      } catch(err) { showSyncWarning('Error reading XLSX: ' + err.message); return; }
     } else {
-      langCols.push({ lang: l, colIdx: i, srcLang: l });
+      csvText = e.target.result.replace(/^﻿/, '');
     }
-  }
-  if(!langCols.length){ alert('Invalid CSV — no language columns found.'); return; }
-
-  // Build lookup: { 'idN': { 'es-ES': 'value', 'de-DE': 'value', ... } }
-  const byId = {};
-  const csvRefTextById = {}; // coluna 1 (referência/origem) de cada linha — usada só pra checar se bate com o HTML
-  for(let li = headerRowIdx + 1; li < lines.length; li++){
-    const cols = splitLine(lines[li]);
-    const id = cols[0].trim();
-    if(!id || !/^id\d+$/i.test(id)) continue;
-    byId[id] = {};
-    csvRefTextById[id] = cols[1] !== undefined ? cols[1] : '';
-    langCols.forEach(({ lang, colIdx }) => {
-      byId[id][lang] = cols[colIdx] !== undefined ? cols[colIdx] : '';
-    });
-  }
-
-  // ── 2. Read IDs from HTML tags ─────────────────────────────────────────────
-  // Every {%translation idN%}...{%endtranslation%} becomes one row.
-  const taggedRows = parseTaggedHtmlRows(IMP.html);
-
-  if(!taggedRows.length){
-    // Should never reach here — onImportHtml already blocks files without tags.
-    // Guard just in case.
-    const errEl = document.getElementById('importHtmlNoTagsError');
-    if(errEl) errEl.classList.add('show');
-    return;
-  }
-
-  // Três categorias bem diferentes de "não bate", tratadas de formas diferentes:
-  //
-  // 1) ID do topo errado — a tag existe no HTML mas não tem NENHUMA linha no CSV,
-  //    ou o CSV tem uma linha pra um id que não existe no HTML. BLOQUEIA: normalmente
-  //    é sinal de que os dois arquivos vieram de tageamentos diferentes (ex: uma
-  //    imagem que o HTML extrai como linha mas o CSV não tem, deslocando tudo).
-  // 2) String errada — o id bate dos dois lados, mas o texto de referência (coluna 1
-  //    do CSV) não é o mesmo texto que está tageado no HTML naquele id. BLOQUEIA:
-  //    é sinal de que o CSV foi gerado pra uma versão diferente do HTML, mesmo com
-  //    os números de id coincidindo por acaso.
-  // 3) Campo em branco — o id bate e o texto de referência bate, só uma célula de
-  //    idioma específica está vazia. Isso é só tradução ainda não feita — SÓ AVISA
-  //    (não bloqueia), a pessoa preenche direto no editor.
-  const normText = s => String(s || '').replace(/\s+/g, ' ').trim();
-  // Linhas de IMAGEM nunca são marcadas com {%translation idN%} no HTML — elas usam
-  // um mecanismo totalmente diferente (o <img src> é trocado direto, já que Liquid
-  // não pode envolver o valor de um atributo). Então uma linha de imagem no CSV
-  // SEMPRE vai parecer "não tageada no HTML" por este método — isso não é um erro
-  // de verdade, é só uma limitação de como validamos. Detecta pelo texto de
-  // referência (coluna 1) parecendo uma URL e não bloqueia por causa dela.
-  const looksLikeImageRow = id => /^https?:\/\//i.test((csvRefTextById[id] || '').trim());
-
-  const htmlIds = taggedRows.map(r => r.id);
-  const csvIds = Object.keys(byId);
-  const missingInCsv = htmlIds.filter(id => !byId[id]);
-  const missingInHtml = csvIds.filter(id => !htmlIds.includes(id) && !looksLikeImageRow(id));
-
-  const stringMismatches = [];
-  const blankCells = []; // [{id, langs:[...]}]
-  taggedRows.forEach(r => {
-    if(!byId[r.id]) return; // já reportado em missingInCsv
-    const refText = csvRefTextById[r.id];
-    if(refText !== undefined && refText !== '' && normText(refText) !== normText(r.src)) {
-      stringMismatches.push({ id: r.id, htmlSrc: r.src, csvSrc: refText });
-      return; // não soma célula em branco pra uma linha que já está errada
-    }
-    const emptyLangs = langCols.map(c => c.lang).filter(l => !byId[r.id][l]);
-    if(emptyLangs.length) blankCells.push({ id: r.id, langs: emptyLangs });
-  });
-
-  // ID errado de verdade (linha inteira sem correspondência) continua bloqueando —
-  // isso é sempre sinal de arquivos incompatíveis. Texto diferente NÃO bloqueia mais:
-  // o mesmo id pode legitimamente ter um texto de referência um pouco diferente
-  // dependendo do país/variante do template, então travar por causa disso atrapalhava
-  // mais do que ajudava. Em vez disso, marca a linha com um aviso amarelo discreto na
-  // tabela — a pessoa confere com calma e marca como "ok" quando já olhou.
-  if(missingInCsv.length || missingInHtml.length) {
-    showImportMismatchModal(missingInCsv, missingInHtml);
-    return;
-  }
-
-  const textMismatchById = {};
-  stringMismatches.forEach(m => { textMismatchById[m.id] = m; });
-
-  if(stringMismatches.length) {
-    showSyncWarning(`⚠ ${stringMismatches.length} row${stringMismatches.length===1?'':'s'} came with a different reference text than what's tagged in the HTML — check the yellow flag${stringMismatches.length===1?'':'s'} in the table.`);
-  }
-
-  if(blankCells.length) {
-    const totalEmpty = blankCells.reduce((n, b) => n + b.langs.length, 0);
-    showSyncWarning(`⚠ ${totalEmpty} translation${totalEmpty===1?'':'s'} across ${blankCells.length} row${blankCells.length===1?'':'s'} came in blank from the CSV — fill them in directly in the editor.`);
-  }
-
-  // ── 3. Build S.csv.rows — one row per HTML tag, translations from CSV by id ─
-  const langs = langCols.map(c => c.lang);
-
-  S.csv.rows = taggedRows.map(r => {
-    const translations = {};
-    langs.forEach(l => {
-      translations[l] = (byId[r.id] && byId[r.id][l] !== undefined) ? byId[r.id][l] : '';
-    });
-    return {
-      id: r.id,
-      src: r.src,
-      display: toLiquidPlaceholder(r.src),
-      isStyle: false, outerKey: null, openTag: null, closeTag: null,
-      isImg: r.isImg, imgTag: r.imgTag,
-      _taggedImg: r.isImg,
-      _textMismatch: textMismatchById[r.id] || null,
-      translations
-    };
-  });
-
-  // ── 4. Set state ───────────────────────────────────────────────────────────
-  // Zera origin/targets de qualquer projeto anterior na mesma sessão — pra este
-  // fluxo, os idiomas vêm inteiramente das colunas do CSV (langs, logo abaixo).
-  // Sem isso, buildCSV() (chamado depois) faz um merge ADITIVO com S.targets
-  // antigo (usado normalmente pra "adicionar mais um idioma" num projeto já
-  // aberto) — se sobrar um país selecionado de uma sessão/projeto anterior,
-  // ele entra somado aos idiomas do CSV, em vez do CSV mandar sozinho.
-  S.origin = null;
-  S.targets = [];
-  S.rawHtml    = IMP.html;
-  S.filename   = IMP.htmlName;
-  S.csv.name   = templateName;
-  S.csv.langs  = langs;
-  S.strings    = S.csv.rows.map(r => ({
-    src: r.src, isImg: r.isImg, imgTag: null,
-    isStyle: false, outerKey: null, openTag: null, closeTag: null
-  }));
-
-  S.isImport = true;
-  // S.isImport, sozinho, não é confiável pra saber "este HTML já está tageado"
-  // depois do import — buildCSV() vira ele pra false assim que já existem rows,
-  // pra controlar a navegação do assistente (pula a tela de Targets), não o
-  // conteúdo. Por isso guardamos num flag SEPARADO que fica true pelo resto da
-  // sessão, pra qualquer lugar que precise saber se pode reusar S.rawHtml direto
-  // (ex: o botão de "Copy/Download Tagged HTML") em vez de rodar buildTaggedHtml()
-  // de novo em cima de um HTML que já tem as tags — o que criava tags aninhadas.
-  S.htmlAlreadyTagged = true;
-  // As linhas de imagem já vieram TAGEADAS no HTML — ou seja, alguém já decidiu
-  // antes que essa imagem é traduzível. buildCSV() descarta silenciosamente
-  // qualquer linha de imagem que não esteja em S.selImgs (esse Set normalmente só
-  // é preenchido quando REABRINDO um projeto salvo, via restoreProjectContent) —
-  // sem marcar aqui, a imagem some da tabela assim que buildCSV() rodar de novo,
-  // mesmo com a tradução certinha vinda do CSV.
-  S.selImgs = new Set(S.csv.rows.filter(r => r.isImg).map(r => r.imgKey || r.src));
-  S.vLang    = langs[0] || null;
-
-  // Go to step 2 (Origin) so the user picks the source language.
-  // From there: Origin → Confirm → Editor.
-  // S.origin will be set before renderConfirm runs, so the Origin badge shows correctly.
-  goTo(2);
+    applyCsvToEditor(csvText);
+  };
+  if(isXlsx) r.readAsArrayBuffer(f); else r.readAsText(f);
+  document.getElementById('editorCsvInput').value = ''; // permite subir o mesmo arquivo de novo depois
 }
+
+function applyCsvToEditor(csvText) {
+  const parsed = parseBrazeCsv(csvText);
+  if(!parsed || !parsed.langs.length) {
+    showCsvUpdateErrorModal(`Could not read that file as a translations CSV/XLSX — no language columns were found. Check that row 2 has language codes (like "es-ES", "de-DE") starting from the 3rd column.`);
+    return;
+  }
+
+  const allCsvIds = new Set();
+  Object.values(parsed.byLang).forEach(rows => rows.forEach(r => allCsvIds.add(r.id)));
+  if(!allCsvIds.size) {
+    showCsvUpdateErrorModal(`That file doesn't look like a translations CSV — no rows starting with an id (like id1, id2…) were found.`);
+    return;
+  }
+
+  const rowById = {};
+  S.csv.rows.forEach(row => { rowById[row.id] = row; });
+
+  let updatedCells = 0;
+  const unmatchedIds = new Set();
+  S.csv.langs.forEach(lang => {
+    const csvRows = parsed.byLang[lang];
+    if(!csvRows) return; // esse idioma não veio nesse CSV — não mexe no que já tinha
+    csvRows.forEach(r => {
+      const row = rowById[r.id];
+      if(!row) { unmatchedIds.add(r.id); return; }
+      row.translations[lang] = r.tl;
+      updatedCells++;
+    });
+  });
+
+  // 0 células importadas com o CSV tendo linhas de verdade quase sempre significa "arquivo
+  // errado" (CSV de outro projeto, ids não batem em nada) — merece um modal bloqueando
+  // e explicando, não só um toast discreto que passa despercebido.
+  if(!updatedCells) {
+    const sampleCsvIds = [...allCsvIds].slice(0, 5).join(', ');
+    const sampleProjectIds = S.csv.rows.slice(0, 5).map(r => r.id).join(', ');
+    showCsvUpdateErrorModal(`None of the ${allCsvIds.size} id(s) in that CSV matched this project — 0 cells were updated. This looks like it might be the wrong file (a CSV from a different project).<br><br><strong>CSV had:</strong> ${escHtml(sampleCsvIds)}${allCsvIds.size > 5 ? '…' : ''}<br><strong>This project has:</strong> ${escHtml(sampleProjectIds)}${S.csv.rows.length > 5 ? '…' : ''}`);
+    return;
+  }
+
+  reBody();
+  refreshViewer();
+  scheduleAutosave();
+
+  showSyncWarning(unmatchedIds.size
+    ? `Updated ${updatedCells} cell(s) from the CSV. ${unmatchedIds.size} id(s) in the CSV weren't found in this project.`
+    : `Updated ${updatedCells} cell(s) from the CSV.`);
+}
+
+function showCsvUpdateErrorModal(message) {
+  const modal = document.getElementById('csvUpdateErrorModal');
+  const body = document.getElementById('csvUpdateErrorBody');
+  if(body) body.innerHTML = message;
+  if(modal) modal.style.display = 'flex';
+}
+
+function closeCsvUpdateErrorModal() {
+  const modal = document.getElementById('csvUpdateErrorModal');
+  if(modal) modal.style.display = 'none';
+}
+
+
+
+
+
 
 /* ── Liquid tokenizers — usados pelo extrator de strings e pelo viewer ── */
 
@@ -4539,6 +5159,34 @@ function projSaveOnBuild(wasImport) {
 
 // Carrega o conteúdo salvo de um projeto direto no app, sem precisar reupload manual.
 // Para na tela de seleção de imagens (3.5), já com as imagens que estavam marcadas.
+// Lê as tags {%translation idN%}...{%endtranslation%} de um HTML já tageado por este
+// app — usado só ao REABRIR um projeto salvo (restoreProjectContent, logo abaixo). Não
+// faz nenhuma validação de CSV/HTML incompatível: dados salvos pelo próprio app sempre
+// batem entre si, diferente de um upload manual de arquivos que pode vir de qualquer lugar.
+function parseSavedProjectHtml(html) {
+  const tagRe = /\{%translation\s+(id\d+)%\}([\s\S]*?)\{%endtranslation%\}/g;
+  const rows = [];
+  let m;
+  while((m = tagRe.exec(html)) !== null) {
+    const id = m[1];
+    const src = m[2];
+    const isImg = /^https?:\/\//.test(src.trim()) && !src.trim().includes(' ');
+    let imgTag = null;
+    if(isImg) {
+      const srcIdx = html.indexOf(src.trim());
+      if(srcIdx !== -1) {
+        let s = srcIdx; while(s > 0 && html[s] !== '<') s--;
+        let e = srcIdx; while(e < html.length && html[e] !== '>') e++;
+        if(/^<img[\s>]/i.test(html.slice(s, s+5))) {
+          imgTag = html.slice(s, e+1).replace(/\{%translation\s+id\d+%\}/g, '').replace(/\{%endtranslation%\}/g, '');
+        }
+      }
+    }
+    rows.push({ id, src, isImg, imgTag });
+  }
+  return rows;
+}
+
 function restoreProjectContent(data, readOnly) {
   resetAll(); // zera TODO o estado global (idiomas customizados, seleção de linha, targets, origin, etc.)
   _approverMode = !!readOnly;
@@ -4547,11 +5195,38 @@ function restoreProjectContent(data, readOnly) {
               // contaminar o projeto que está sendo aberto agora (foi a causa do bug do origin).
   closeCommentPopover(); // garante que não fique um popover de comentário aberto referenciando a linha de outro projeto
 
-  IMP.html = data.html;
-  IMP.htmlName = data.htmlName || 'project.html';
-  IMP.csv = data.csv;
+  const taggedRows = parseSavedProjectHtml(data.html);
+  const parsedCsv = parseBrazeCsv(data.csv) || { templateName: '', langs: [], byLang: {} };
+  const langs = parsedCsv.langs || [];
 
-  loadImport(); // reaproveita o parser já testado — monta S.csv.rows/langs, seta S.isImport, vai pra goTo(2)
+  const byId = {};
+  langs.forEach(lang => {
+    (parsedCsv.byLang[lang] || []).forEach(r => {
+      if(!byId[r.id]) byId[r.id] = {};
+      byId[r.id][lang] = r.tl;
+    });
+  });
+
+  S.rawHtml = data.html;
+  S.filename = data.htmlName || 'project.html';
+  S.csv.name = parsedCsv.templateName || S.filename.replace(/\.html?$/i, '');
+  S.csv.langs = langs;
+  S.csv.rows = taggedRows.map(r => ({
+    id: r.id,
+    src: r.src,
+    display: toLiquidPlaceholder(r.src),
+    isStyle: false, outerKey: null, openTag: null, closeTag: null,
+    isImg: r.isImg, imgTag: r.imgTag,
+    translations: Object.fromEntries(langs.map(l => [l, (byId[r.id] && byId[r.id][l]) || '']))
+  }));
+  S.strings = S.csv.rows.map(r => ({
+    src: r.src, isImg: r.isImg, imgTag: null,
+    isStyle: false, outerKey: null, openTag: null, closeTag: null
+  }));
+  S.isImport = true;
+  S.htmlAlreadyTagged = true;
+  S.selImgs = new Set(S.csv.rows.filter(r => r.isImg).map(r => r.imgKey || r.src));
+  S.vLang = langs[0] || null;
 
   // Restaura comentários por célula (casando pelo id da linha)
   if(data.comments) {
@@ -4574,12 +5249,13 @@ function restoreProjectContent(data, readOnly) {
   S.approvalActivity = Array.isArray(data.approvalActivity) ? [...data.approvalActivity] : [];
   S.approvalDeletedIds = Array.isArray(data.approvalDeletedIds) ? [...data.approvalDeletedIds] : [];
 
-  // (loadImport(), chamado acima, já marca como selecionadas as imagens que vieram
-  // tageadas no HTML — inclui tanto reabrir um projeto salvo quanto importar um novo.)
+  // (S.selImgs, montado acima a partir de S.csv.rows, já marca como selecionadas as
+  // imagens que vieram tageadas no HTML salvo.)
 
-  // O loadImport reconstrói S.strings só a partir do CSV — perdemos qualquer
-  // imagem do HTML que nunca foi selecionada. Aqui, re-escaneamos o HTML e
-  // adicionamos as que faltam, pra que apareçam clicáveis no passo Images.
+  // S.strings acima foi montado só a partir das tags {%translation%} — perdemos
+  // qualquer imagem do HTML que nunca chegou a ser selecionada/tageada. Aqui,
+  // re-escaneamos o HTML e adicionamos as que faltam, pra que apareçam clicáveis
+  // no passo Images caso a pessoa queira voltar lá e mudar a seleção.
   (function reAddMissingImages(){
     if(!S.rawHtml) return;
     const already = new Set(S.strings.filter(s => s.isImg).map(s => s.src));
@@ -4630,15 +5306,9 @@ function goToEditor() {
   PAGES.forEach(id=>{
     document.getElementById(id).classList.toggle('active', id==='page5');
   });
-  document.getElementById('pageContinue')?.classList.remove('active');
   updateBreadcrumb('edit');
-  // Regra: só esconde o botão "Download HTML" no fluxo de IMPORT MANUAL
-  // (Continue Editing → uploads HTML+CSV do zero). Em projetos abertos do
-  // Dashboard, o botão fica visível — a pessoa pode precisar reexportar o
-  // HTML tageado a qualquer momento durante a edição.
-  const isManualImport = !!(IMP.html) && !_openedFromDashboard;
   const btnHtml = document.getElementById('btnDlHtml');
-  if(btnHtml) btnHtml.style.display = isManualImport ? 'none' : '';
+  if(btnHtml) btnHtml.style.display = '';
   buildTable();
   renderLbar();
   showViewer();
@@ -4704,7 +5374,7 @@ function extractStr() {
   const SKIP_PAIR  = /^(script|style|pre|code|noscript|svg)$/i;   // have open+close
   const SKIP_VOID  = /^(meta|link|path|input|br|hr|img|area|base|col|embed|param|source|track|wbr)$/i; // self-closing
   const STYLE      = /^(strong|b|em|i|u|s|mark|small|sup|sub)$/i;
-  const res=[]; let styleStack=[], skipDepth=0, msoDepth=0, anchorStack=[];
+  const res=[]; let styleStack=[], skipDepth=0, msoDepth=0, anchorStack=[], colWidthStack=[];
   const imgOccCount={}; // conta ocorrências por src — necessário pra dar uma chave ÚNICA
   // mesmo quando o MESMO texto de src se repete (ex: <img src="{{ partner_1_logo }}"> —
   // uma variável Liquid reatribuída via {% capture %} antes de cada seção, representando
@@ -4740,6 +5410,21 @@ function extractStr() {
         // sem "continue" — o texto/tags dentro do <a> continuam extraídos normalmente
       }
 
+      // Rastreia a largura (%) da coluna Braze atual (<td class="column..." width="NN%">)
+      // — usado abaixo pra diferenciar um ÍCONE genuíno de assinatura (sozinho numa
+      // coluna de 100%) de uma IMAGEM DE CONTEÚDO real (lado a lado com uma coluna de
+      // texto num layout de 2/3 colunas, ex: "baixe o app" com foto+parágrafo) — as duas
+      // podem ter a mesma largura em pixels, então só o pixel width não dava pra confiar.
+      if(/^td$/i.test(tagName)){
+        if(!isClose && !isSelfClose){
+          const wPctM = tok.match(/\bwidth=["']?([\d.]+)%/i);
+          const inherited = colWidthStack.length ? colWidthStack[colWidthStack.length-1] : 100;
+          colWidthStack.push(wPctM ? parseFloat(wPctM[1]) : inherited);
+        } else if(isClose){
+          colWidthStack.pop();
+        }
+      }
+
       // Void elements never increment skipDepth
       if(SKIP_VOID.test(tagName)){
         // Capture <img> src for image localisation
@@ -4760,8 +5445,14 @@ function extractStr() {
             const wM = tok.match(/\bwidth=["']?(\d+)/i);
             const widthPx = wM ? parseInt(wM[1], 10) : null;
             const topAnchor = anchorStack[anchorStack.length - 1];
+            // Só conta como ícone se também estiver numa coluna de largura TOTAL (100%) —
+            // uma imagem de conteúdo real (ex: foto de um passo, "baixe o app") divide a
+            // linha com uma coluna de texto ao lado (50%/33%) mesmo sendo pequena em px,
+            // então largura de coluna < 100% sempre desqualifica o "é só um ícone".
+            const colPct = colWidthStack.length ? colWidthStack[colWidthStack.length - 1] : 100;
+            const inMultiColumnLayout = colPct < 99.5;
             const inLiquidLinkIcon = !!topAnchor && /^\{\{[^{}]+\}\}$/.test(topAnchor.href) &&
-              widthPx !== null && widthPx <= 150;
+              widthPx !== null && widthPx <= 150 && !inMultiColumnLayout;
             if(srcVal && srcVal.length>5 && !srcVal.startsWith('data:') && !isLiquid && !/^\s*$/.test(srcVal) && !inLiquidLinkIcon){
               // Chave única por OCORRÊNCIA, não só por texto de src — sem isso, imagens
               // reais repetidas (mesmo ícone/logo usado mais de uma vez no e-mail) ficavam
@@ -5131,7 +5822,10 @@ function refreshViewerImgPick() {
   if(!imgs.length){
     if(_imgPickHtml === S.rawHtml) return; // já carregado
     _imgPickHtml = S.rawHtml;
-    const html = S.rawHtml.replace(/\{%translation\s+\S+?%\}/g,'').replace(/\{%endtranslation%\}/g,'');
+    // annotateConditionals troca {% if/else/endif %} pela tag discreta com quebra de
+    // linha — sem isso, essa marcação Liquid crua ficava visível e podia até juntar
+    // conteúdo que devia estar em blocos separados numa linha só, quebrando o layout.
+    const html = injectCondStyle(annotateConditionals(renderFooterPlaceholder(S.rawHtml.replace(/\{%translation\s+\S+?%\}/g,'').replace(/\{%endtranslation%\}/g,''))));
     const iframe = document.getElementById('vf');
     if(iframe){
       const old = iframe.src;
@@ -5151,6 +5845,15 @@ function refreshViewerImgPick() {
   let html = S.rawHtml;
   // Strip existing translation tags
   html = html.replace(/\{%translation\s+\S+?%\}/g,'').replace(/\{%endtranslation%\}/g,'');
+  // renderFooterPlaceholder ANTES do loop de wrap de imagens logo abaixo — os <img> do
+  // footer de exemplo não vêm de S.strings, então o loop nunca tenta torná-los clicáveis.
+  html = renderFooterPlaceholder(html);
+  // Mesma tag discreta com quebra de linha do preview principal pros marcadores
+  // {% if/else/endif %} — antes ficava cru aqui, podendo juntar conteúdo numa linha só.
+  // injectCondStyle traz o CSS da tag pra dentro deste iframe (o CSS da página pai não
+  // atravessa), senão a tag aparecia sem estilo nenhum — só texto puro, sem o visual
+  // de badge igual no preview principal.
+  html = injectCondStyle(annotateConditionals(html));
 
   // Wrap each detected <img> with a clickable overlay. Rastreia por onde já
   // procuramos PRA CADA src — sem isso, duas linhas com o MESMO src (logo/ícone
@@ -5186,6 +5889,11 @@ function refreshViewerImgPick() {
     .bip-sel::after{border-color:#d8385e;box-shadow:0 0 0 3px rgba(216,56,94,.2);}
     .bip-badge{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:#d8385e;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none;z-index:10;}
     .bip-sel .bip-badge{display:flex;}
+    /* Footer é só um retrato de exemplo (nunca é traduzido) — bloqueia qualquer
+       clique/seleção ali dentro, mesmo que por acaso algum src bata com uma linha real. */
+    .mlt-footer-block, .mlt-footer-block *{pointer-events:none!important;cursor:not-allowed!important;}
+    .mlt-footer-block{position:relative;}
+    .mlt-footer-block::before{content:"Footer preview — not selectable";position:absolute;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,20,40,.72);color:#fff;font:700 9px/1 -apple-system,sans-serif;letter-spacing:.03em;text-transform:uppercase;padding:4px 9px;border-radius:20px;pointer-events:none;z-index:20;white-space:nowrap;}
   </style>`;
   const script = sc + `(function(){
     document.querySelectorAll('.bip').forEach(function(el){
@@ -5382,7 +6090,7 @@ function rowsHTML() {
         return `<td class="tl tl-cell${isEmpty ? ' tl-missing' : ''}">
           <div class="tl-inner">
             <input class="img-url" type="text" placeholder="URL for ${l}…" value="${v}"
-              onfocus="switchAndHL(${ri},'${l}');showImgUrlTip()"
+              onfocus="switchAndHL(${ri},'${l}')"
               oninput="setCellV(${ri},'${l}',this.value);sendHL(${ri},'${l}')"
             />
             ${cellCommentBtn(ri, l, row)}
@@ -5896,7 +6604,22 @@ function autosaveProject() {
 let _avAutosaveTimer = null;
 function scheduleApprovalAutosave() {
   clearTimeout(_avAutosaveTimer);
+  // Item de campanha: sem merge remoto (uso solo por item), só grava direto no item
+  // e salva o projeto pelo caminho normal de campanhas.
+  if(_campaign) { _avAutosaveTimer = setTimeout(autosaveCampaignApprovalState, 600); return; }
   _avAutosaveTimer = setTimeout(autosaveApprovalState, 600);
+}
+
+function autosaveCampaignApprovalState() {
+  if(!_campaign) return;
+  commitCampaignItemApprovalState();
+  saveCampaignProject();
+  if(document.getElementById('approvalView')?.classList.contains('show')) {
+    renderApprovalSidebar();
+    renderApprovalDoneBanner();
+    renderApprovalActivityFeed();
+    approvalLangs().langs.forEach(l => renderApprovalPins(l));
+  }
 }
 
 function mergeApprovalState(remoteData, localComments, localActivity, localDoneByLang, localDeletedIds) {
@@ -6080,6 +6803,116 @@ function setVL(lang,btn){
   refreshViewer();
 }
 
+// Template real do footer do Wellhub (o e-mail nunca traz esse HTML — é injetado pelo
+// Braze via content block em tempo de envio, então sem isso o preview mostrava só a
+// tag {{content_blocks.${...Footer}}} crua ou nada). Merge tags trocados por valores
+// de exemplo (mesmos do print oficial) só pra dar uma ideia visual — isso NUNCA entra
+// na tradução, é sempre o mesmo em qualquer idioma até o Braze resolver de verdade.
+const FOOTER_PLACEHOLDER_HTML = `
+<div class="mlt-footer-block">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width:600px; background-color:#F6EDDF;">
+  <tbody>
+    <tr>
+      <td align="center" style="padding:24px 0 16px 0;">
+        <a href="#">
+          <img src="https://braze-images.com/appboy/communication/assets/image_assets/images/682f2e147a94980064eef4d5/original.png?1747922452"
+               alt="Wellhub Logo" width="103" height="20"
+               style="display:block; margin:0 auto; border:0; outline:none; text-decoration:none;">
+        </a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding:8px 0 24px 0;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+          <tr>
+            <td style="padding:0 8px;">
+              <a href="#">
+                <img src="https://braze-images.com/appboy/communication/assets/image_assets/images/682f2f0ee0554e006476f3cd/original.png?1747922701"
+                     alt="Download Wellhub on Google Play" width="122" height="35" style="display:block; margin:0 auto; border:0;">
+              </a>
+            </td>
+            <td style="padding:0 8px;">
+              <a href="#">
+                <img src="https://braze-images.com/appboy/communication/assets/image_assets/images/682f2f0e04985400668ec6ce/original.png?1747922701"
+                     alt="Download Wellhub on App Store" width="122" height="35" style="display:block; margin:0 auto; border:0;">
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding:0 0 24px 0;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+          <tr>
+            <td style="padding:0 8px;">
+              <a href="#">
+                <img src="https://braze-images.com/appboy/communication/assets/image_assets/images/682f30115f79450064b0fab3/original.png?1747922960"
+                     alt="Follow Wellhub on Instagram" width="32" height="32" style="display:block; margin:0 auto; border:0;">
+              </a>
+            </td>
+            <td style="padding:0 8px;">
+              <a href="#">
+                <img src="https://braze-images.com/appboy/communication/assets/image_assets/images/682f3010c22ba80074ddc9a8/original.png?1747922960"
+                     alt="Follow Wellhub on Linkedin" width="32" height="32" style="display:block; margin:0 auto; border:0;">
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="font-size:12px; color:#1D1D1F; font-family:'Inter', Arial, sans-serif; line-height:1.4; padding:0 16px 24px 16px;">
+        <a href="#" style="color:#1D1D1F; text-decoration:none; padding:0 5px;">Help Center</a>
+        •
+        <a href="#" style="color:#1D1D1F; text-decoration:none; padding:0 5px;">Terms &amp; Conditions</a>
+        •
+        <a href="#" style="color:#1D1D1F; text-decoration:none; padding:0 5px;">Privacy Policy</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding:0 32px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+          <tr><td style="border-top:1px solid #ECE0CD; font-size:0; line-height:0;">&nbsp;</td></tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="font-size:12px; color:#625E59; font-family:'Inter', Arial, sans-serif; line-height:1.4; padding:16px 16px 8px 16px;">
+        © 2026 Wellhub. • 30 Irving Place, 8th floor, New York, NY 10003, USA
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="font-size:12px; color:#625E59; font-family:'Inter', Arial, sans-serif; line-height:1.4; padding:0 32px 16px 32px;">
+        In-person partners are illustrative only; and not guaranteed in all locations or plans. Prices and other information herein are for illustration only; actual plan prices or terms may vary and are subject to change. Questions? Help Center.
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="font-size:12px; color:#625E59; font-family:'Inter', Arial, sans-serif; line-height:1.4; padding:0 0 24px 0;">
+        <a href="#" style="color:#1D1D1F; text-decoration:underline;">Unsubscribe</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding:10px 16px 20px;background:#fdf0d5;">
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:#8a6d3b;font-family:-apple-system,sans-serif;letter-spacing:.01em;">
+          ⚠ This footer is just an English-language placeholder — it's injected by Braze content blocks and isn't part of translation.
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>`;
+
+// Detecta {{content_blocks.${...Footer...}}} (qualquer variação de nome/filtro que
+// contenha "footer") e troca por um retrato fiel de como o footer real do Wellhub
+// aparece — sem isso, o preview mostrava só a tag Liquid crua ou um espaço em branco,
+// já que esse conteúdo só existe de verdade dentro do Braze, nunca no HTML exportado.
+// Duas (ou mais) chamadas consecutivas de content block de footer viram UM footer só.
+function renderFooterPlaceholder(html) {
+  const footerCbRe = /(\{\{\s*content_blocks\.\$\{[^}]*footer[^}]*\}[^}]*\}\}\s*)+/gi;
+  return html.replace(footerCbRe, FOOTER_PLACEHOLDER_HTML);
+}
+
 // Substitui {% if %}/{% elsif %}/{% else %}/{% endif %} (e {% unless %}/{% endunless %})
 // por uma tag de texto discreta bem no lugar onde a marcação estava — só a palavra-chave
 // (IF/ELSIF/ELSE/ENDIF/UNLESS/ENDUNLESS), sem a condição nem nenhum texto a mais.
@@ -6090,15 +6923,60 @@ function annotateConditionals(html){
     const kind = m[1].toLowerCase();
     out += html.slice(last, m.index);
     last = m.index + m[0].length;
-    out += `<span class="mlt-cond-tag">${kind.toUpperCase()}</span>`;
+    // <br> força quebra ANTES e DEPOIS sempre — sem isso, uma tag no meio de conteúdo
+    // que devia estar em blocos separados (ex: entre linhas de uma tabela) juntava tudo
+    // numa linha só e estragava o layout do preview.
+    out += `<br class="mlt-cond-br"><span class="mlt-cond-tag">${kind.toUpperCase()}</span><br class="mlt-cond-br">`;
   }
   out += html.slice(last);
   return out;
 }
 
+// CSS da tag de if/else/unless (.mlt-cond-tag/.mlt-cond-br) — precisa ser injetada DENTRO
+// de cada documento de iframe que usa annotateConditionals(), já que o CSS da página pai
+// não atravessa pra dentro de um iframe com seu próprio HTML (srcdoc/blob). Usada tanto no
+// preview principal quanto no preview da tela de selecionar imagens — mesmo visual nos dois.
+function injectCondStyle(html){
+  const condStyle = `<style>
+.mlt-cond-tag{display:inline-block;font-size:9px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:1px 5px;margin:0 2px;border-radius:3px;font-family:-apple-system,sans-serif;color:#8a8a82;background:#e8e8e5;border:1px solid #d8d8d2;white-space:nowrap;vertical-align:middle;}
+.mlt-footer-block, .mlt-footer-block *{pointer-events:none!important;cursor:not-allowed!important;user-select:none!important;}
+.mlt-footer-block{position:relative;}
+.mlt-footer-block::before{content:"Footer preview — not selectable";position:absolute;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,20,40,.72);color:#fff;font:700 9px/1 -apple-system,sans-serif;letter-spacing:.03em;text-transform:uppercase;padding:4px 9px;border-radius:20px;pointer-events:none;z-index:20;white-space:nowrap;}
+</style>`;
+  return html.includes('</head>') ? html.replace('</head>', condStyle + '</head>') : condStyle + html;
+}
+
 // Builds the final rendered HTML string for a given lang (or the origin, when lang is falsy/matches origin).
 // Extracted from refreshViewer so the same rendering logic can be reused by the Approval grid,
 // which needs one rendered frame per country instead of a single viewer frame.
+// Substitui Liquid merge tags conhecidas por placeholders curtos e legíveis, em QUALQUER
+// lugar que renderize o e-mail (previewer principal, Approval View, miniatura do card no
+// Dashboard) — centralizado aqui pra não ter que lembrar de replicar cada regra nova em
+// mais de um lugar. Sem isso, tags Liquid cruas apareciam como texto enorme sem quebra de
+// linha, estourando o layout onde quer que o e-mail fosse exibido.
+function replaceLiquidPlaceholders(html){
+  // aceita tanto "content_block" (singular) quanto "content_blocks" (plural), já que
+  // e-mails diferentes usam as duas grafias pra referenciar o mesmo tipo de bloco.
+  html=html.replace(/\{\{content_blocks?\.\$\{gym_quantity\}[^}]*\}\}/g, 'XXX');
+  html=html.replace(/\{\{content_blocks?\.\$\{app_quantity\}[^}]*\}\}/g, 'XXX');
+  html=html.replace(/\{\{context\.first_paid_plan_price\}\}/g, '{first_paid_plan_price}');
+  html=html.replace(/\{\{context\.offer_trial_duration\}\}/g, '{trial_duration}');
+  html=html.replace(/\{\{content_blocks?\.\$\{currency\}[^}]*\}\}/g, '{currency}');
+  html=html.replace(/\{\{custom_attribute\.\$\{([^}]+)\}[^}]*\}\}/g, '{$1}');
+  // Rede de segurança: qualquer OUTRA Liquid merge tag com filtro "| default: '...'" que
+  // não caiu em nenhuma regra específica acima (ex: {{rating | default: '4.5'}}, ou uma
+  // variação de sintaxe de content_block que a gente ainda não tinha visto).
+  html=html.replace(/\{\{\s*([^{}]+?)\s*\|\s*default:\s*['"][^'"]*['"]\s*\}\}/g, (_, expr) => {
+    const dollarMatch = expr.match(/\$\{([^}]+)\}/);
+    const name = (dollarMatch ? dollarMatch[1] : expr.split('.').pop()).trim();
+    return '{' + name + '}';
+  });
+  html=html.replace(/\{\{content_blocks?\.\$\{catalog_global_all_partners_data\}[^}]*\}\}/g, '');
+  html=html.replace(/\{\{\s*partner_(\d+)\.name\s*\}\}/g, 'Partner $1');
+  html=html.replace(/\{\{\s*partner_(\d+)\.logo_url\s*\}\}/g, '');
+  return html;
+}
+
 function buildPreviewHtml(lang){
   const origLang=S.allC.find(c=>c.code===S.origin)?.lang;
   const isOrig=!lang||lang===origLang;
@@ -6107,22 +6985,11 @@ function buildPreviewHtml(lang){
   // Step 1: strip any existing Liquid translation tags (from tagged HTML imports)
   html=html.replace(/\{%translation\s+\S+?%\}/g,'').replace(/\{%endtranslation%\}/g,'');
 
-  // Step 1b: replace specific quantity content_blocks with XXX placeholder in viewer
-  html=html.replace(/\{\{content_blocks\.\$\{gym_quantity\}[^}]*\}\}/g, 'XXX');
-  html=html.replace(/\{\{content_blocks\.\$\{app_quantity\}[^}]*\}\}/g, 'XXX');
-  // Replace Liquid vars with readable placeholders in viewer
-  html=html.replace(/\{\{context\.first_paid_plan_price\}\}/g, '{first_paid_plan_price}');
-  html=html.replace(/\{\{context\.offer_trial_duration\}\}/g, '{trial_duration}');
-  html=html.replace(/\{\{content_blocks\.\$\{currency\}[^}]*\}\}/g, '{currency}');
-  html=html.replace(/\{\{custom_attribute\.\$\{([^}]+)\}[^}]*\}\}/g, '{$1}');
+  html=replaceLiquidPlaceholders(html);
+  html=renderFooterPlaceholder(html);
   html=annotateConditionals(html);
   // Strip {% assign partner_X_id = ... %} tags only — purely declarative, never visible
   html=html.replace(/\{%[-\s]*assign\s+partner_\d+_id\s*=[^%]*?%\}/g, '');
-  // Strip catalog_global_all_partners_data content_block — declarative, not visible
-  html=html.replace(/\{\{content_blocks\.\$\{catalog_global_all_partners_data\}[^}]*\}\}/g, '');
-  // Replace partner_N.name / partner_N.logo_url with readable placeholders — any quantity
-  html=html.replace(/\{\{\s*partner_(\d+)\.name\s*\}\}/g, 'Partner $1');
-  html=html.replace(/\{\{\s*partner_(\d+)\.logo_url\s*\}\}/g, '');
 
   // Step 2 — two-pass injection so duplicate strings always get the right data-tid.
   //
@@ -6212,10 +7079,7 @@ function buildPreviewHtml(lang){
 
   // CSS das badges de if/else/unless injetada no <head> (ou no início, se não houver <head>) —
   // precisa viver dentro do próprio documento do iframe, já que os <span> ficam no conteúdo.
-  const condStyle = `<style>
-.mlt-cond-tag{display:inline-block;font-size:9px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:1px 5px;margin:0 2px;border-radius:3px;font-family:-apple-system,sans-serif;color:#8a8a82;background:#e8e8e5;border:1px solid #d8d8d2;white-space:nowrap;vertical-align:middle;}
-</style>`;
-  html = html.includes('</head>') ? html.replace('</head>', condStyle + '</head>') : condStyle + html;
+  html = injectCondStyle(html);
 
   // Toda <img> que falhar ao carregar (URL quebrada, ou um merge tag Liquid que nunca foi
   // resolvido, ex: {{content_blocks.${x}}} usado direto como src) vira uma caixinha "IMG" do
@@ -6522,6 +7386,22 @@ function copyTaggedHtml() {
   }).catch(()=>{ /* fallback */ });
 }
 
+function toggleDlDropdown() {
+  const menu = document.getElementById('dlDropdownMenu');
+  if(!menu) return;
+  menu.style.display = menu.style.display === 'none' ? '' : 'none';
+}
+function closeDlDropdown() {
+  const menu = document.getElementById('dlDropdownMenu');
+  if(menu) menu.style.display = 'none';
+}
+document.addEventListener('click', (e) => {
+  const wrap = document.querySelector('.dl-dropdown-wrap');
+  const menu = document.getElementById('dlDropdownMenu');
+  if(!wrap || !menu || menu.style.display === 'none') return;
+  if(!wrap.contains(e.target)) menu.style.display = 'none';
+});
+
 function dlXLSX(){
   if(typeof XLSX === 'undefined'){ alert('SheetJS not loaded.'); return; }
   const langs = S.csv.langs;
@@ -6567,36 +7447,6 @@ function closeEmptyLangModal() {
   modal2.classList.remove('show');
   modal2.style.display = 'none';
 }
-
-let _imgTipShown = false;
-
-function showImgUrlTip() {
-  if(_imgTipShown) return;
-  _imgTipShown = true;
-  const tip = document.getElementById('imgUrlTip');
-  if(tip){ tip.style.display = 'block'; setTimeout(closeImgTip, 8000); }
-}
-
-function closeImgTip() {
-  const tip = document.getElementById('imgUrlTip');
-  if(tip) tip.style.display = 'none';
-}
-
-function openGallery() {
-  const m = document.getElementById('galleryModal');
-  if(m) m.style.display = 'flex';
-}
-
-function closeGallery() {
-  const m = document.getElementById('galleryModal');
-  if(m) m.style.display = 'none';
-}
-
-function galleryLinkClick(el) {
-  // Let the link open, then close modal after a tick
-  setTimeout(closeGallery, 150);
-}
-
 
 // Convert lang code to Braze format: pt-BR → pt_br (lowercase, underscore)
 // Retorna o locale key do Braze (ex: pt_br) — usado EXCLUSIVAMENTE no CSV/XLSX exportado.
@@ -6752,15 +7602,26 @@ window.addEventListener('message', function(e){
   }
 
   if(e.data.type === 'av-height'){
+    // In-app é overlay fixed em tela cheia — scrollHeight do documento não reflete o
+    // tamanho real da mensagem (o overlay some do fluxo normal), então a altura fica
+    // travada na "tela de celular" fixa em vez de tentar auto-ajustar.
+    if(_campaignInappPreview) { renderApprovalPins(e.data.lang); return; }
     const vp = document.getElementById('avVp-' + cssSafeLang(e.data.lang));
     const iframe = vp ? vp.querySelector('iframe') : null;
-    if(iframe) iframe.style.height = Math.max(e.data.height, 400) + 'px';
+    const minH = vp && vp.classList.contains('av-frame-viewport-bare') ? 0 : 400;
+    if(iframe) iframe.style.height = Math.max(e.data.height, minH) + 'px';
     renderApprovalPins(e.data.lang);
     return;
   }
 
   if(e.data.type === 'av-selection'){
     onFrameSelection(e.data);
+    return;
+  }
+
+  if(e.data.type === 'camp-height'){
+    const iframe = document.getElementById('campaignPreviewFrame');
+    if(iframe) iframe.style.height = Math.max(e.data.height, 300) + 'px';
     return;
   }
 
@@ -6828,7 +7689,7 @@ function approverOpenProject(id) {
 }
 
 function openApprovalView() {
-  if(!S.rawHtml) { alert('Upload an HTML first.'); return; }
+  if(!S.rawHtml && !_campaignPushPreview) { alert('Upload an HTML first.'); return; }
   document.getElementById('approvalView').classList.add('show');
   const sub = document.getElementById('avSubtitle');
   if(sub) sub.textContent = S.csv.name || '';
@@ -6849,6 +7710,12 @@ function closeApprovalView() {
   // Por isso sempre volta pro Dashboard nesse caso, mesmo com o appBody tecnicamente visível.
   // Se vier do editor normal (dono/editor usando "Approve copies" por dentro), só fecha o
   // overlay e volta pra tabela do CSV, como sempre.
+  if(_campaign) {
+    commitCampaignItemApprovalState();
+    saveCampaignProject();
+    renderCampaignMain(); // volta pra galeria (ou edit, se era daí que "Approve copies" foi aberto)
+    return;
+  }
   if(_approverMode || !document.getElementById('appBody') || document.getElementById('appBody').style.display === 'none') {
     goToDashboard();
   }
@@ -6989,6 +7856,8 @@ function renderAvOnlineStack(presenceState) {
 // "@media (max-width:620px)" — um frame de exatamente 600px cairia dentro dele e
 // renderizaria empilhado feito celular, mesmo essa vitrine querendo mostrar o desktop.
 const AV_FRAME_W = 680, AV_FRAME_GAP = 90, AV_FRAME_TOP = 50;
+const AV_INAPP_FRAME_W = 320, AV_INAPP_FRAME_H = 640; // in-app é overlay fixed em tela cheia — vira uma "tela de celular" de tamanho fixo, não uma altura auto tipo e-mail
+function avFrameW() { return _campaignInappPreview ? AV_INAPP_FRAME_W : AV_FRAME_W; }
 let _avView = { scale: 1, tx: 40, ty: 60 };
 let _avPan = { active: false, moved: false, startX: 0, startY: 0, startTx: 0, startTy: 0 };
 let _avSuppressNextClick = false;
@@ -7006,7 +7875,7 @@ function applyAvTransform() {
 // mesma conta usada em avFitToFrames pra caber tudo na tela.
 function avContentWidth() {
   const { langs } = approvalLangs();
-  return langs.length ? langs.length * (AV_FRAME_W + AV_FRAME_GAP) : 0;
+  return langs.length ? langs.length * (avFrameW() + AV_FRAME_GAP) : 0;
 }
 
 // Barra de rolagem horizontal "de verdade" pro canvas com pan/zoom via transform —
@@ -7109,7 +7978,7 @@ function avFitToFrames() {
   const { langs } = approvalLangs();
   const vp = document.getElementById('avCanvasViewport');
   if(!vp || !langs.length) return;
-  const totalW = langs.length * (AV_FRAME_W + AV_FRAME_GAP);
+  const totalW = langs.length * (avFrameW() + AV_FRAME_GAP);
   const availW = vp.clientWidth - 80;
   _avView.scale = Math.max(0.15, Math.min(1, availW / totalW));
   _avView.tx = 40;
@@ -7186,13 +8055,14 @@ function renderApprovalGrid() {
     canvas.innerHTML = `<div class="empty-state" style="width:360px;"><p>No languages configured yet.</p></div>`;
     return;
   }
-  canvas.style.width = (langs.length * (AV_FRAME_W + AV_FRAME_GAP)) + 'px';
+  const frameW = avFrameW();
+  canvas.style.width = (langs.length * (frameW + AV_FRAME_GAP)) + 'px';
   canvas.innerHTML = langs.map((lang, i) => {
     const isOrig = lang === origLang;
     const country = S.allC.find(c => c.lang === lang);
-    const x = i * (AV_FRAME_W + AV_FRAME_GAP);
+    const x = i * (frameW + AV_FRAME_GAP);
     return `
-      <div class="av-canvas-frame" style="left:${x}px;top:${AV_FRAME_TOP}px;width:${AV_FRAME_W}px;">
+      <div class="av-canvas-frame" style="left:${x}px;top:${AV_FRAME_TOP}px;width:${frameW}px;">
         <div class="av-canvas-frame-title">
           <span>${country?.flag || '🌐'}</span>
           <span>${country?.name || lang}</span>
@@ -7201,7 +8071,7 @@ function renderApprovalGrid() {
           <span class="av-frame-count" style="display:none;">0</span>
           <span class="av-frame-approve-slot" id="avApproveSlot-${cssSafeLang(lang)}"></span>
         </div>
-        <div class="av-frame-viewport" id="avVp-${cssSafeLang(lang)}" style="width:${AV_FRAME_W}px;"></div>
+        <div class="av-frame-viewport${(_campaignPushPreview || _campaignInappPreview) ? ' av-frame-viewport-bare' : ''}" id="avVp-${cssSafeLang(lang)}" style="width:${frameW}px;"></div>
       </div>
     `;
   }).join('');
@@ -7230,8 +8100,30 @@ function renderFrameApproveSlot(lang) {
 // Injeta um reporter de altura (mesmo padrão de 'braze-height' já usado no viewer principal)
 // pra que o frame cresça até a altura real do e-mail renderizado — sem scroll interno,
 // já que navegar pelo conteúdo agora é feito dando zoom/pan no canvas, como no Figma.
+// Push não tem rawHtml (não é upload de HTML, são 2 campos de texto puro) — monta um
+// documento sintético com data-tid="id1"/"id2" pra que o mecanismo de comentar-por-seleção
+// (que depende de achar o data-tid mais próximo) continue funcionando sem alteração.
+function buildPushFrameHtml(lang) {
+  const item = _campaign.items[_campaignItemIndex];
+  const titleRow = item.rows.find(r => r.id === 'id1');
+  const bodyRow = item.rows.find(r => r.id === 'id2');
+  const origLang = S.allC.find(c => c.code === S.origin)?.lang;
+  const isOrig = !lang || lang === origLang;
+  const title = isOrig ? (titleRow?.src || '') : (titleRow?.translations?.[lang] || '');
+  const body = isOrig ? (bodyRow?.src || '') : (bodyRow?.translations?.[lang] || '');
+  return `<html><body style="margin:0;font-family:-apple-system,Helvetica,Arial,sans-serif;background:transparent;padding:20px 12px;">
+    <div style="max-width:360px;background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 16px rgba(0,0,0,.12);display:flex;gap:12px;">
+      <div style="width:44px;height:44px;border-radius:12px;background:#d8385e;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;">🔔</div>
+      <div style="min-width:0;">
+        <div data-tid="id1" style="font-weight:700;font-size:14px;color:#000;margin-bottom:2px;">${escHtml(title)}</div>
+        <div data-tid="id2" style="font-size:13px;color:#333;line-height:1.4;">${escHtml(body)}</div>
+      </div>
+    </div>
+  </body></html>`;
+}
+
 function buildApprovalFrameHtml(lang) {
-  let html = buildPreviewHtml(lang);
+  let html = _campaignPushPreview ? buildPushFrameHtml(lang) : buildPreviewHtml(lang);
   const sc = '<scr' + 'ipt>';
   const scEnd = '</scr' + 'ipt>';
   const script = sc + `(function(){
@@ -7258,6 +8150,9 @@ function buildApprovalFrameHtml(lang) {
         var yPct = (rect.bottom / docH) * 100;
         var node = range.startContainer;
         var el = node.nodeType === 1 ? node : node.parentElement;
+        // Footer é só um retrato de exemplo, nunca traduzido — selecionar texto ali
+        // dentro não deve abrir caixinha de comentário (mesmo bloqueio do seletor de imagens).
+        if(el && el.closest('.mlt-footer-block')) return;
         var tidEl = el ? el.closest('[data-tid]') : null;
         window.parent.postMessage({
           type: 'av-selection',
@@ -7292,7 +8187,8 @@ function buildApprovalFrameHtml(lang) {
 function loadApprovalFrame(lang) {
   const vp = document.getElementById('avVp-' + cssSafeLang(lang));
   if(!vp) return;
-  vp.innerHTML = `<iframe style="width:100%;height:900px;"></iframe>`;
+  const initH = _campaignPushPreview ? 130 : _campaignInappPreview ? AV_INAPP_FRAME_H : 900;
+  vp.innerHTML = `<iframe style="width:100%;height:${initH}px;"></iframe>`;
   const iframe = vp.querySelector('iframe');
   iframe.src = URL.createObjectURL(new Blob([buildApprovalFrameHtml(lang)], { type: 'text/html' }));
   renderApprovalPins(lang);
