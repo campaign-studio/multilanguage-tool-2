@@ -2375,10 +2375,30 @@ function openNotifTarget(notifId) {
   closeNotifPanel();
   if(notif.meta.kind === 'approval') {
     pendingApprovalCommentId = notif.meta.commentId;
+    // Um approver puro (sem ser dono) clicando aqui SEMPRE caía no projOpen() de dono/editor
+    // — que tenta tomar a trava de EDIÇÃO do projeto (e pode ser bloqueado por "outra pessoa
+    // já editando", ou simplesmente nunca chamar openPendingApprovalTarget(), já que esse
+    // só roda dentro de buildTable(), que projOpen chama mas approverOpenProject não precisa).
+    // Resultado: o clique na notificação parecia não fazer nada — o comentário nunca abria.
+    const p = projGetAll().find(x => x.id === notif.meta.projectId);
+    const me = authCurrentUser();
+    const isOwner = p && me && p.owner.toLowerCase() === me.email.toLowerCase();
+    const isPureApprover = p && me && !isOwner && (p.approvers || []).some(e => e.toLowerCase() === me.email.toLowerCase());
+    if(isPureApprover) {
+      approverOpenProject(notif.meta.projectId); // já abre a Approval View direto, sem trava de edição
+      const id = pendingApprovalCommentId;
+      pendingApprovalCommentId = null;
+      setTimeout(() => highlightApprovalComment(id), 150);
+      return;
+    }
     projOpen(notif.meta.projectId);
     return;
   }
-  pendingCommentTarget = { rowId: notif.meta.rowId, commentId: notif.meta.commentId };
+  // notif.meta.lang precisa vir junto — sem ele, openPendingCommentTarget() sempre caía
+  // no PRIMEIRO idioma da tabela (S.csv.langs[0]) em vez do idioma real onde o comentário
+  // foi deixado, então o popover abria na célula errada: sem comentário nenhum lá dentro,
+  // parecendo que "sumiu" o comentário que a pessoa veio ver.
+  pendingCommentTarget = { rowId: notif.meta.rowId, lang: notif.meta.lang, commentId: notif.meta.commentId };
   projOpen(notif.meta.projectId);
 }
 
@@ -2966,7 +2986,10 @@ async function saveCampaignProject() {
 let _campaignAutosaveTimer = null;
 function scheduleCampaignAutosave() {
   clearTimeout(_campaignAutosaveTimer);
-  _campaignAutosaveTimer = setTimeout(saveCampaignProject, 600);
+  // 150ms em vez de 600ms — "instantâneo" o suficiente pra não perder edição nenhuma se a
+  // pessoa fechar a aba rápido, mas ainda junta as teclas de uma mesma rajada de digitação
+  // (salvar a cada tecla individual seria desperdício de escrita sem ganho perceptível).
+  _campaignAutosaveTimer = setTimeout(saveCampaignProject, 150);
 }
 
 // A barra de cima mostra os 3 TIPOS (Email/In-app/Push) — clicar num tipo mostra
@@ -6071,8 +6094,14 @@ function openPendingCommentTarget() {
   setTimeout(() => {
     const rowEl = document.querySelectorAll('#gstb tr')[ri];
     if(rowEl) rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // Abre o popover na célula correta (com o idioma da menção, ou o primeiro idioma disponível)
-    const targetLang = lang && S.csv.langs.includes(lang) ? lang : S.csv.langs[0];
+    // Abre o popover na célula correta (com o idioma da menção, ou o primeiro idioma disponível).
+    // Notificações antigas guardaram o "lang" no formato cru do CSV daquele momento (ex: "fr_fr"),
+    // enquanto S.csv.langs sempre normaliza pro formato com hífen (ex: "fr-FR") — comparar direto
+    // (===/includes) sem normalizar os dois lados fazia SEMPRE cair no primeiro idioma da tabela,
+    // mesmo quando o comentário estava era numa tradução diferente (o popover abria "vazio").
+    const normalizedLang = lang ? (expandLang(lang)[0] || fromBrazeLang(lang)) : null;
+    const targetLang = normalizedLang && S.csv.langs.includes(normalizedLang) ? normalizedLang
+      : (lang && S.csv.langs.includes(lang) ? lang : S.csv.langs[0]);
     if(targetLang) toggleCommentPopover(ri, targetLang);
   }, 150);
 }
@@ -6549,11 +6578,12 @@ function insertMention(name) {
 }
 
 
-// Salva automaticamente as traduções enquanto a pessoa edita (com debounce pra não travar a digitação).
+// Salva automaticamente as traduções enquanto a pessoa edita (com debounce pra não travar a
+// digitação) — 150ms em vez de 600ms, pra salvar praticamente ao vivo sem gravar a cada tecla.
 let _autosaveTimer = null;
 function scheduleAutosave() {
   clearTimeout(_autosaveTimer);
-  _autosaveTimer = setTimeout(autosaveProject, 600);
+  _autosaveTimer = setTimeout(autosaveProject, 150);
 }
 
 // Salva imediatamente (sem esperar o debounce de 600ms) se a pessoa fechar/recarregar
