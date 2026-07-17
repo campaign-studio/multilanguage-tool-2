@@ -2157,7 +2157,13 @@ async function ghPullProjects() {
     const { data, error } = await sb.from('projects').select('id,payload');
     if(error) throw error;
     const projects = (data || []).map(r => r.payload).filter(Boolean);
-    localStorage.setItem(PROJ_KEY, JSON.stringify(projects));
+    // Faz o MESMO merge por projeto (updatedAt) que projSaveAll usa — sem isso, um pull
+    // disparado pelo Realtime (que acontece até pra mudanças feitas pela própria aba) podia
+    // buscar uma leitura do servidor um instante atrasada em relação a um autosave local
+    // recém-feito, e sobrescrever a edição na hora, mesmo com o "await _pendingProjectsPush"
+    // acima (que só cobre o push ainda em voo, não a defasagem de leitura logo depois).
+    const merged = mergeProjectsForSave(projects);
+    localStorage.setItem(PROJ_KEY, JSON.stringify(merged));
     setSyncDot('on');
     return true;
   } catch(e) {
@@ -5456,7 +5462,15 @@ function onFile(f) {
 // Uma tag "solta" tipo {{ partner_1_name }}, sem namespace, normalmente é só a REFERÊNCIA a
 // uma variável que já foi populada antes via {% assign %} — também não é algo que precise (ou
 // deva) ser traduzido, então também é ignorada.
+//
+// context.first_paid_plan_price é um NÚMERO/preço puro (normalmente aparece colado num
+// content_blocks de moeda, tipo "{{content_blocks.${currency}}}{{context.first_paid_plan_price}}"
+// formando "$29.99") — não é texto de negócio pra traduzir, então é ignorado igual content_blocks.
+function isIgnoredContextField(val) {
+  return /context\.\$?\{?first_paid_plan_price\}?/i.test(val);
+}
 function isRecognizedMergeTag(val) {
+  if(isIgnoredContextField(val)) return false;
   return /\{\{\s*(?:custom_attribute|context|event_properties|recipient)\s*\./.test(val);
 }
 
@@ -5512,13 +5526,34 @@ function splitTokensByConditional(tokens) {
   if(current.length) branches.push(current);
   return branches;
 }
-// Emite a linha traduzível de um ramo (array de tokens splitLiquid): texto + custom_attribute
-// /context viram UMA linha só mesclada; content_blocks e tags soltas de assign são ignoradas
-// (mergeLiquidInline já as remove do texto).
+// Uma merge tag IGNORADA (content_blocks, tag solta de assign, ou um campo específico tipo
+// context.first_paid_plan_price) que aparece NO MEIO de uma frase é uma FRONTEIRA: separa o
+// texto antes e depois dela em linhas diferentes, em vez de só sumir e deixar um buraco no
+// meio de uma linha só. Ex: "...starting at {{content_blocks...}}{{context.first_paid_plan_
+// price}}/month." vira DUAS linhas — "...starting at" e "/month." — sem nenhuma linha pra a
+// tag ignorada em si (ela não é texto, é só um valor de negócio que varia por usuário/plano).
+function isIgnoredMergeToken(tk) {
+  if(tk.type !== 'liquid') return false;
+  if(/^\{%/.test(tk.val.trim())) return false; // tag de controle: tratada à parte (branches/isPureControl)
+  return !isRecognizedMergeTag(tk.val);
+}
+// Emite a(s) linha(s) traduzível(is) de um ramo (array de tokens splitLiquid): texto +
+// custom_attribute/context viram UMA linha só mesclada; ao encontrar uma tag ignorada, fecha
+// a linha atual (se tiver conteúdo) e começa uma nova depois dela.
 function emitBranchRows(branchTokens, res) {
-  const branchSrc = branchTokens.map(tk=>tk.val).join('');
-  const mergedText = mergeLiquidInline(branchSrc);
-  if(mergedText.length >= 2) res.push({text:mergedText, src:branchSrc, display:toLiquidPlaceholder(branchSrc), isStyle:false});
+  let seg = [];
+  const flushSeg = () => {
+    if(!seg.length) return;
+    const segSrc = seg.map(tk=>tk.val).join('');
+    const mergedText = mergeLiquidInline(segSrc);
+    if(mergedText.length >= 2) res.push({text:mergedText, src:segSrc, display:toLiquidPlaceholder(segSrc), isStyle:false});
+    seg = [];
+  };
+  for(const tk of branchTokens){
+    if(isIgnoredMergeToken(tk)){ flushSeg(); continue; }
+    seg.push(tk);
+  }
+  flushSeg();
 }
 
 // Convert Liquid variables to readable placeholders for display in editor/viewer
@@ -5546,6 +5581,13 @@ function extractStr() {
   const SKIP_VOID  = /^(meta|link|path|input|br|hr|img|area|base|col|embed|param|source|track|wbr)$/i; // self-closing
   const STYLE      = /^(strong|b|em|i|u|s|mark|small|sup|sub)$/i;
   const res=[]; let styleStack=[], skipDepth=0, msoDepth=0, anchorStack=[], colWidthStack=[];
+  // Verdadeiro enquanto estamos NO MEIO de um {% ... %} que começou num token de texto anterior
+  // e ainda não fechou — acontece quando uma tag HTML ou comentário no meio de uma condição
+  // Liquid (ex: {% if {{a}} == 0 <!--x--> and {{b}} %}) corta a condição em dois tokens de
+  // texto separados. Sem isso, o pedaço que sobra depois da interrupção (ex: "and {{b}} %}")
+  // parecia texto normal e virava linha traduzível por engano, mesmo sendo só sintaxe do
+  // Liquid — nunca pode ter tag de tradução dentro de um {% %}.
+  let inOpenControlTag = false;
   const imgOccCount={}; // conta ocorrências por src — necessário pra dar uma chave ÚNICA
   // mesmo quando o MESMO texto de src se repete (ex: <img src="{{ partner_1_logo }}"> —
   // uma variável Liquid reatribuída via {% capture %} antes de cada seção, representando
@@ -5559,6 +5601,13 @@ function extractStr() {
     const isTag=(ti%2===1);
 
     if(isTag){
+      // "Downlevel-revealed": <!--[if !mso]><!--> ... <!--<![endif]--> — o "<!-->" logo
+      // depois do "[if !mso]" fecha o comentário NA HORA pra qualquer cliente que respeita
+      // HTML de verdade, revelando o conteúdo entre esse marcador e o fechamento como
+      // VISÍVEL (só o Outlook, que lê o comentário condicional de verdade, esconde). Não é
+      // um bloco oculto — sem essa distinção, o conteúdo real dentro dele (ex: o botão de
+      // CTA "de verdade", fora do fallback VML só-MSO) nunca virava linha traduzível.
+      if(/<!--\[if\s+!mso\]>/i.test(tok)) { continue; }
       if(/<!--\[if/i.test(tok))   { msoDepth++; continue; }
       if(/<!\[endif\]/i.test(tok)){ msoDepth=Math.max(0,msoDepth-1); continue; }
       if(/^<!--/.test(tok)) continue;
@@ -5687,6 +5736,12 @@ function extractStr() {
                 // cada um vira sua própria linha (o wrapper de estilo único não corresponde a
                 // nenhum ramo específico, então essas linhas saem como texto simples).
                 for(const branchTokens of splitTokensByConditional(innerTokens)) emitBranchRows(branchTokens, res);
+              } else if(innerHasLiquid && innerTokens.some(isIgnoredMergeToken)){
+                // Tag ignorada (content_blocks, first_paid_plan_price...) no MEIO do texto
+                // estilizado — mesma fronteira de sempre: separa em linhas antes/depois dela.
+                // O wrapper de estilo único não corresponde a nenhum dos dois pedaços, então
+                // saem como texto simples (igual o caso do if/elsif/else acima).
+                emitBranchRows(innerTokens, res);
               } else {
                 // Liquid misturado com texto de verdade dentro da tag de estilo SEM
                 // content_blocks (ex: um <strong>Oi {{custom_attribute.${first_name}
@@ -5712,10 +5767,38 @@ function extractStr() {
 
     // Text token
     if(msoDepth>0||skipDepth>0) continue;
-    const t=tok.trim();
+
+    let workTok = tok;
+    // Ainda estamos dentro de um {% ... %} que abriu num token anterior (uma tag HTML/
+    // comentário no meio da condição cortou o fluxo) — procura o "%}" que fecha; até achar,
+    // o token inteiro é controle puro (nunca vira linha traduzível).
+    if(inOpenControlTag){
+      const closeIdx = workTok.indexOf('%}');
+      if(styleStack.length>0) styleStack[styleStack.length-1].parts.push(workTok);
+      if(closeIdx === -1) continue;
+      inOpenControlTag = false;
+      workTok = workTok.slice(closeIdx+2);
+      if(!workTok || !workTok.trim()) continue;
+    }
+
+    const t=workTok.trim();
     if(!t||t.length<2){
-      if(styleStack.length>0) styleStack[styleStack.length-1].parts.push(tok);
+      if(styleStack.length>0) styleStack[styleStack.length-1].parts.push(workTok);
       continue;
+    }
+
+    // Um {% ... que ABRE mas não FECHA dentro deste mesmo token (uma tag HTML/comentário logo
+    // depois interrompe a condição, ex: "{% if {{a}} == 0 <!--x--> and {{b}} %}" vira dois
+    // tokens de texto) — trata o token inteiro como controle (conservador: melhor perder um
+    // pedacinho raro de texto real bem nesse ponto do que arriscar tagueiar sintaxe do Liquid)
+    // e lembra que continua aberto pro(s) próximo(s) token(s) de texto.
+    {
+      const openIdx = t.search(/\{%[-\s]/);
+      if(openIdx !== -1 && !t.slice(openIdx).includes('%}')){
+        inOpenControlTag = true;
+        if(styleStack.length>0) styleStack[styleStack.length-1].parts.push(workTok);
+        continue;
+      }
     }
 
     // Skip pure Liquid control tags (no real text possible)
@@ -5731,12 +5814,12 @@ function extractStr() {
     const isEffectivelyEmpty = textOnly.length < 4 && !isSoleMergeTag;
 
     if(isPureControl || isEffectivelyEmpty){
-      if(styleStack.length>0) styleStack[styleStack.length-1].parts.push(tok);
+      if(styleStack.length>0) styleStack[styleStack.length-1].parts.push(workTok);
       continue;
     }
 
     if(styleStack.length>0){
-      styleStack[styleStack.length-1].parts.push(tok);
+      styleStack[styleStack.length-1].parts.push(workTok);
     } else {
       const tokens = splitLiquid(t);
       const hasLiquid = tokens.some(tk => tk.type==='liquid');
@@ -5764,17 +5847,15 @@ function extractStr() {
         // custom_attribute/context acontecendo só dentro do ramo em si.
         for(const branchTokens of splitTokensByConditional(tokens)) emitBranchRows(branchTokens, res);
       } else {
-        // Liquid MISTURADO com texto de verdade SEM content_blocks (ex: "Hi {{custom_attribute
+        // Liquid MISTURADO com texto de verdade (ex: "Hi {{custom_attribute
         // .${first_name}|default:'there'}}, welcome!" ou "Enjoy your
-        // {{context.offer_trial_duration}} days"), OU sem Liquid nenhum — nos dois casos vira
-        // UMA linha só. Antes o caso misto quebrava a frase em várias linhas separadas no CSV,
-        // obrigando quem traduz a mexer em pedaços soltos sem ver a frase inteira. Agora o
-        // merge tag fica preservado ao pé da letra dentro do texto (src = a frase crua, com a
+        // {{context.offer_trial_duration}} days"), OU sem Liquid nenhum — vira UMA linha só,
+        // com o merge tag preservado ao pé da letra dentro do texto (src = a frase crua, com a
         // tag Liquid junto) — a pessoa traduz a frase toda e só reposiciona a tag onde fizer
-        // sentido na gramática do idioma dela. O texto de exibição (pra não confundir no grid)
-        // troca a tag Liquid por um placeholder legível tipo {trial_duration}; o valor real só
-        // aparece de fato no preview final, via replaceLiquidPlaceholders().
-        if(textOnly.length >= 2) res.push({text:mergeLiquidInline(t), src:t, display:toLiquidPlaceholder(t), isStyle:false});
+        // sentido na gramática do idioma dela. Se tiver uma tag IGNORADA no meio (content_blocks,
+        // first_paid_plan_price...), emitBranchRows quebra em linhas separadas antes/depois dela
+        // em vez de deixar um buraco no meio de uma linha só.
+        emitBranchRows(tokens, res);
       }
     }
   }
@@ -7172,6 +7253,15 @@ function replaceLiquidPlaceholders(html){
   html=html.replace(/\{\{content_blocks?\.\$\{catalog_global_all_partners_data\}[^}]*\}\}/g, '');
   html=html.replace(/\{\{\s*partner_(\d+)\.name\s*\}\}/g, 'Partner $1');
   html=html.replace(/\{\{\s*partner_(\d+)\.logo_url\s*\}\}/g, '');
+  // Rede de segurança final: QUALQUER content_blocks que sobrou (nome novo que a gente ainda
+  // não tinha visto, sem "| default:") — sem isso, a tag Liquid inteira aparecia crua no
+  // preview (texto longo tipo "{{content_blocks.${SignupLinkV2}}}"), quebrando o layout em
+  // vez de virar um placeholder curto e discreto como os outros.
+  html=html.replace(/\{\{\s*content_blocks?\.\$\{([^}]+)\}[^}]*\}\}/g, '{$1}');
+  // Mesma rede de segurança, agora pra QUALQUER context.* (ou custom_attribute sem "${}")
+  // que sobrou sem regra específica — ex: {{context.last_free_plan_name}}.
+  html=html.replace(/\{\{\s*context\.([a-zA-Z0-9_]+)\s*\}\}/g, '{$1}');
+  html=html.replace(/\{\{\s*custom_attribute\.([a-zA-Z0-9_]+)\s*\}\}/g, '{$1}');
   return html;
 }
 
@@ -7249,6 +7339,14 @@ function buildPreviewHtml(lang){
           const sq = (inTag.match(/'/g)||[]).length;
           if(dq % 2 !== 0 || sq % 2 !== 0){ searchFrom = p + key.length; continue; }
         }
+        // Skip se estiver dentro de um {% ... %} ainda aberto (ex: dentro da condição de um
+        // {% if %}) — mesma proteção do buildTaggedHtml, pro preview não marcar a posição
+        // errada quando a palavra também aparece como sintaxe Liquid antes do texto real.
+        const beforeNoCss = stripClosedSkippedBlocks(before);
+        const bracketOpens = (beforeNoCss.match(/\{%/g)||[]).length;
+        const bracketCloses = (beforeNoCss.match(/%\}/g)||[]).length;
+        if(bracketOpens > bracketCloses){ searchFrom = p + key.length; continue; }
+        if(isInsideSkippedTag(before)){ searchFrom = p + key.length; continue; }
         pos = p; break;
       }
       if(pos === -1){ previewMissed.push(row); return; }
@@ -7504,6 +7602,28 @@ function setVS(sz,btn){
 }
 
 
+// Diz se a posição "before" (texto até o ponto candidato) está dentro de um <style>/<script>
+// ainda aberto. buildTaggedHtml/buildPreviewHtml fazem busca de texto simples no documento
+// inteiro — sem isso, uma palavra comum (ex: "and") que também aparece dentro de um <style>
+// (tipo num @media query) podia casar com essa ocorrência ERRADA em vez da linha de conteúdo
+// real, já que <style>/<script> não tem tratamento especial nessa busca linear.
+function isInsideSkippedTag(before) {
+  const styleOpens = (before.match(/<style[\s>]/gi)||[]).length;
+  const styleCloses = (before.match(/<\/style>/gi)||[]).length;
+  const scriptOpens = (before.match(/<script[\s>]/gi)||[]).length;
+  const scriptCloses = (before.match(/<\/script>/gi)||[]).length;
+  return styleOpens > styleCloses || scriptOpens > scriptCloses;
+}
+
+// CSS legitimamente produz "%}" por coincidência (ex: "width:100%}" — um valor percentual bem
+// na frente do fechamento de uma regra), o que bagunça a contagem de "{% ... %}" ainda aberto
+// usada pra achar onde uma linha de verdade deve ser tagueada. Remove os blocos <style>/
+// <script> JÁ FECHADOS antes de contar — assim CSS nunca conta como abertura/fechamento de
+// tag Liquid.
+function stripClosedSkippedBlocks(text) {
+  return text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+}
+
 /* ═══════════ HTML EXPORT MODAL ═══════════ */
 function buildTaggedHtml() {
   if(!S.rawHtml) return '';
@@ -7542,6 +7662,11 @@ function buildTaggedHtml() {
         const opens  = (before.match(/\{%translation [^%]+?%\}/g)||[]).length;
         const closes = (before.match(/\{%endtranslation%\}/g)||[]).length;
         if(opens > closes){ searchFrom = pos + key.length; continue; }
+        const beforeNoCss = stripClosedSkippedBlocks(before);
+        const bracketOpens = (beforeNoCss.match(/\{%/g)||[]).length;
+        const bracketCloses = (beforeNoCss.match(/%\}/g)||[]).length;
+        if(bracketOpens > bracketCloses){ searchFrom = pos + key.length; continue; }
+        if(isInsideSkippedTag(before)){ searchFrom = pos + key.length; continue; }
         tagged = tagged.slice(0, pos) + `{%translation ${r.id}%}${key}{%endtranslation%}` + tagged.slice(pos + key.length);
         tagged_ok = true;
         break;
@@ -7572,6 +7697,16 @@ function buildTaggedHtml() {
       const opens  = (before.match(/\{%translation [^%]+?%\}/g)||[]).length;
       const closes = (before.match(/\{%endtranslation%\}/g)||[]).length;
       if(opens > closes){ searchFrom = pos + key.length; continue; }
+      // Skip if inside um {% ... %} ainda ABERTO (ex: dentro da condição de um {% if %} que
+      // ainda não fechou) — sem isso, uma palavra comum tipo "and" que também aparece como
+      // operador booleano dentro de uma condição podia casar com essa ocorrência ERRADA (a
+      // primeira do documento), colocando a tag de tradução DENTRO da sintaxe do Liquid e
+      // quebrando o parser do Braze ("endtranslation is not a valid delimiter for if tags").
+      const beforeNoCss = stripClosedSkippedBlocks(before);
+      const bracketOpens = (beforeNoCss.match(/\{%/g)||[]).length;
+      const bracketCloses = (beforeNoCss.match(/%\}/g)||[]).length;
+      if(bracketOpens > bracketCloses){ searchFrom = pos + key.length; continue; }
+      if(isInsideSkippedTag(before)){ searchFrom = pos + key.length; continue; }
       tagged = tagged.slice(0, pos) + replacement + tagged.slice(pos + key.length);
       tagged_ok = true;
       break;
