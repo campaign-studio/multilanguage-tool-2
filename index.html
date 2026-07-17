@@ -2527,9 +2527,36 @@ function projSaveAllLocal(projects) {
   localStorage.setItem(PROJ_KEY, JSON.stringify(projects));
 }
 
+// Faz merge POR PROJETO (usando updatedAt) contra o que está no localStorage agora, em vez
+// de sobrescrever a lista inteira. Sem isso: se duas coisas salvam quase ao mesmo tempo (você
+// editando uma tradução na tela, enquanto outra aba/processo salva a lista inteira que tinha
+// lido ANTES da sua edição), quem salva por último apaga silenciosamente a edição da outra —
+// mesmo em projetos que essa outra escrita nem tocou de propósito. Comparando timestamp por
+// projeto, cada um mantém sua versão mais recente de verdade, não a "foto" mais recente da
+// lista toda.
+function mergeProjectsForSave(projects) {
+  const latest = projGetAll();
+  const latestById = {};
+  latest.forEach(p => { latestById[p.id] = p; });
+  const incomingIds = new Set(projects.map(p => p.id));
+  const merged = projects.map(p => {
+    const other = latestById[p.id];
+    if(!other) return p; // projeto novo, só existe no lado que está salvando agora
+    const mine = p.updatedAt || 0, theirs = other.updatedAt || 0;
+    return theirs > mine ? other : p; // mantém quem editou por último de verdade
+  });
+  // Projeto que já existe no armazenamento atual mas não veio no array que estamos salvando
+  // (ex: criado por outra aba entre a hora que lemos e a hora que salvamos) — preserva, não
+  // deixa sumir. Exceção: projetos deletados recentemente por este mesmo processo não devem
+  // ser ressuscitados aqui.
+  latest.forEach(p => { if(!incomingIds.has(p.id) && !_recentlyDeletedProjectIds.has(p.id)) merged.push(p); });
+  return merged;
+}
+
 function projSaveAll(projects) {
-  projSaveAllLocal(projects); // salva local imediatamente — não trava esperando o GitHub
-  ghMergeAndPushProjects(projects); // sincroniza com o GitHub em segundo plano, com merge
+  const merged = mergeProjectsForSave(projects);
+  projSaveAllLocal(merged); // salva local imediatamente — não trava esperando o GitHub
+  ghMergeAndPushProjects(merged); // sincroniza com o GitHub em segundo plano, com merge
 }
 
 function projIsLocked(p) {
@@ -4799,10 +4826,33 @@ function isValidSpreadsheet(f) {
 }
 
 
+// Quebra o texto do CSV em "linhas" respeitando aspas \u2014 um campo entre aspas pode ter uma
+// quebra de linha literal dentro (comum quando o CSV passa por Excel/Sheets, ex: uma merge
+// tag Liquid sozinha na pr\u00F3pria linha do par\u00E1grafo). Um split ing\u00EAnuo por '\n' cortava esse
+// campo no meio, perdendo o conte\u00FAdo real e deixando a linha "vazia" no CSV.
+function splitCsvRecords(text) {
+  const records = [];
+  let cur = '', q = false;
+  for(let i = 0; i < text.length; i++){
+    const c = text[i];
+    if(c === '"'){
+      if(q && text[i+1] === '"'){ cur += '""'; i++; }
+      else { q = !q; cur += c; }
+    } else if(c === '\n' && !q){
+      records.push(cur);
+      cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  if(cur) records.push(cur);
+  return records;
+}
+
 function parseBrazeCsv(text) {
   // Detect separator: semicolon (multi-lang export) or comma (single-lang export)
   const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\u2028/g, ' ').replace(/\u2029/g, ' ');
-  const lines = clean.split('\n').map(l => l.trimEnd()).filter(Boolean);
+  const lines = splitCsvRecords(clean).map(l => l.trimEnd()).filter(Boolean);
   if(lines.length < 2) return null;
 
   // Detect separator from first data row (line 2), not header.
@@ -4988,7 +5038,23 @@ function stripLiquid(str){
       out+=str[i++];
     }
   }
-  return out.replace(/&nbsp;/gi,'').replace(/&#160;/g,'').trim();
+  // Além de &nbsp;/&#160;, cobre outras entidades de espaço INVISÍVEL usadas como espaçador
+  // decorativo em e-mail (hair space, thin space, zero-width space...) — sem isso, um <p>
+  // que só tem um desses espaçadores (ex: "&#8202;") passava no filtro de tamanho mínimo e
+  // virava uma linha "em branco" no CSV, parecendo um bug quando na verdade não tem texto
+  // nenhum ali pra traduzir.
+  return out
+    .replace(/&nbsp;/gi,'')
+    .replace(/&#160;/g,'')
+    // U+2000–U+200A: espaços de largura variável do Unicode (en/em/thin/hair space etc) —
+    // faixa termina em 200A (8202); 2010 em diante já são travessão/hífen, que são texto
+    // VISÍVEL de verdade e não podem ser removidos aqui.
+    .replace(/&#(819[2-9]|820[0-2]);/g,'')
+    .replace(/&#(820[3-7]);/g,'')          // U+200B–U+200F: largura zero / marcas direcionais invisíveis
+    .replace(/&#65279;/g,'')               // BOM / zero-width no-break space
+    .replace(/&zwnj;/gi,'')
+    .replace(/&zwj;/gi,'')
+    .trim();
 }
 
 // Divide um texto em tokens do tipo 'text' e 'liquid' ({{ }} ou {% %}).
@@ -5105,7 +5171,7 @@ function buildCsvStringForSave() {
     esc(S.csv.name) + ',' + emptyCols,
     ',' + esc('Translation tags') + ',' + langs.map(l=>toBrazeLang(l)).join(','),
     ...S.csv.rows.map(r =>
-      r.id + ',' + esc(r.src) + ',' + langs.map(l=>esc(r.translations[l]||'')).join(',')
+      r.id + ',' + esc(csvSourceText(r)) + ',' + langs.map(l=>esc(r.translations[l]||'')).join(',')
     )
   ];
   return '\uFEFF' + lines.join('\n');
@@ -5193,7 +5259,15 @@ function parseSavedProjectHtml(html) {
   while((m = tagRe.exec(html)) !== null) {
     const id = m[1];
     const src = m[2];
-    const isImg = /^https?:\/\//.test(src.trim()) && !src.trim().includes(' ');
+    const trimmedSrc = src.trim();
+    // Além de http(s)://, cobre protocolo-relativo (//cdn...), data URI, e caminho relativo
+    // terminando em extensão de imagem — só http(s) deixava passar batido qualquer imagem
+    // hospedada de outro jeito, perdendo a seleção/imgTag pra sempre ao reabrir o projeto.
+    const isImg = !trimmedSrc.includes(' ') && (
+      /^(?:https?:)?\/\//.test(trimmedSrc) ||
+      /^data:image\//i.test(trimmedSrc) ||
+      /\.(?:png|jpe?g|gif|webp|svg)(?:\?.*)?$/i.test(trimmedSrc)
+    );
     let imgTag = null;
     if(isImg) {
       const srcIdx = html.indexOf(src.trim());
@@ -5373,6 +5447,80 @@ function onFile(f) {
   r.readAsText(f);
 }
 
+// content_blocks é catálogo/dado de negócio (quantidade de academias, moeda, nome de
+// parceiro...) que vem de um bloco de conteúdo pré-montado no Braze — não é texto traduzível
+// e não faz sentido rastrear no CSV, então é ignorado por completo, igual uma tag de controle.
+// Já custom_attribute (first_name, client_name...) e context.* SÃO dado real de tradução, e
+// viram parte da MESMA linha do texto ao redor.
+//
+// Uma tag "solta" tipo {{ partner_1_name }}, sem namespace, normalmente é só a REFERÊNCIA a
+// uma variável que já foi populada antes via {% assign %} — também não é algo que precise (ou
+// deva) ser traduzido, então também é ignorada.
+function isRecognizedMergeTag(val) {
+  return /\{\{\s*(?:custom_attribute|context|event_properties|recipient)\s*\./.test(val);
+}
+
+// Junta texto misturado com merge tags (context/custom_attribute/etc) numa única string
+// traduzível: tags de controle puro (if/elsif/else/endif/unless/endunless) somem (não são
+// texto, só decidem o que aparece), content_blocks também some (catálogo/dado de negócio,
+// não é pra traduzir), mas merge tags de verdade (context/custom_attribute) ficam CRUAS no
+// texto — exatamente como aparecem no HTML, sem virar placeholder nem valor de "default".
+// Isso é o que a pessoa vê e edita no CSV/grade; o preview visual final é que troca essas
+// tags por algo legível (via replaceLiquidPlaceholders), então não precisa fazer isso aqui.
+function mergeLiquidInline(str) {
+  return splitLiquid(str).map(tk => {
+    if(tk.type !== 'liquid') return tk.val;
+    if(/^\{%/.test(tk.val.trim())) return '';
+    if(!isRecognizedMergeTag(tk.val)) return '';
+    return tk.val;
+  }).join('').replace(/\s{2,}/g, ' ').trim();
+}
+
+// Texto de origem que vai pro CSV exportado (coluna que a pessoa vê e traduz). row.src
+// precisa continuar guardando o Liquid CRU (é usado pra achar a posição exata no HTML na
+// hora de tag guear/exportar), mas isso não pode vazar pro CSV que a pessoa vê — senão
+// content_blocks/custom_attribute/context aparecem como tag crua no meio da frase. Linhas
+// recém-extraídas (extractStr) já têm o texto limpo em row.text; linhas de um projeto
+// REABERTO (restoreProjectContent) não têm esse campo, então recalcula a partir do src cru.
+function csvSourceText(row) {
+  if(row.isImg) return row.src;
+  if(row.text) return row.text;
+  if(row.isLiquidFull || row.isLiquidDefault) return row.src || '';
+  return mergeLiquidInline(row.src||'') || row.src || '';
+}
+
+// {% if %}/{% elsif %}/{% else %} marcam ramos MUTUAMENTE EXCLUSIVOS — só um deles é
+// exibido de cada vez. Juntar o texto de ramos diferentes numa única linha traduzível (ex.:
+// "Activate my free plan → Start your free trial → Explore Wellhub →") produz uma frase sem
+// sentido nenhum e nunca corresponde ao que é renderizado de verdade. Cada ramo precisa virar
+// sua própria linha no CSV, com o merge (custom_attribute/context) acontecendo só DENTRO de
+// cada ramo.
+function isConditionalBoundary(tk) {
+  return tk.type === 'liquid' && /^\{%[-\s]*(?:if|elsif|else|endif|unless|endunless|case|when|endcase)\b/i.test(tk.val.trim());
+}
+function splitTokensByConditional(tokens) {
+  const branches = [];
+  let current = [];
+  for(const tk of tokens){
+    if(isConditionalBoundary(tk)){
+      if(current.length) branches.push(current);
+      current = [];
+    } else {
+      current.push(tk);
+    }
+  }
+  if(current.length) branches.push(current);
+  return branches;
+}
+// Emite a linha traduzível de um ramo (array de tokens splitLiquid): texto + custom_attribute
+// /context viram UMA linha só mesclada; content_blocks e tags soltas de assign são ignoradas
+// (mergeLiquidInline já as remove do texto).
+function emitBranchRows(branchTokens, res) {
+  const branchSrc = branchTokens.map(tk=>tk.val).join('');
+  const mergedText = mergeLiquidInline(branchSrc);
+  if(mergedText.length >= 2) res.push({text:mergedText, src:branchSrc, display:toLiquidPlaceholder(branchSrc), isStyle:false});
+}
+
 // Convert Liquid variables to readable placeholders for display in editor/viewer
 // {{custom_attribute.${client_name} | default: 'x'}} → {client_name}
 // {{context.first_paid_plan_price}} → {first_paid_plan_price}
@@ -5514,37 +5662,40 @@ function extractStr() {
             const frame=styleStack.splice(fi)[0];
             const inner=frame.parts.join('').trim();
             const innerTextOnly = stripLiquid(inner);
-            const isPureControlInner = /^\s*\{%[-\s]*(?:assign|capture|endcapture|endif|endfor|endunless|endcase|render|include)\b/i.test(inner);
-            if(inner && inner.length>=2 && !isPureControlInner && innerTextOnly.length>=4){
+            const isPureControlInner = /^\s*\{%[-\s]*(?:assign|capture|endcapture|endif|endfor|endunless|endcase|case|when|render|include)\b/i.test(inner);
+            const soleInnerTokens = splitLiquid(inner);
+            const isSoleInnerMergeTag = soleInnerTokens.length === 1 && soleInnerTokens[0].type === 'liquid' && soleInnerTokens[0].val.startsWith('{{') && isRecognizedMergeTag(soleInnerTokens[0].val);
+            if(inner && inner.length>=2 && !isPureControlInner && (innerTextOnly.length>=4 || isSoleInnerMergeTag)){
               const outerKey=frame.openTag+frame.parts.join('')+frame.closeTag;
               const innerTokens = splitLiquid(inner);
               const innerHasLiquid = innerTokens.some(tk=>tk.type==='liquid');
-              if(innerHasLiquid){
-                // Mixed text+Liquid inside a style tag: split into separate rows,
-                // each wrapped with the SAME style open/close tags as the original.
-                for(const tk of innerTokens){
-                  if(tk.type==='liquid'){
-                    const dm = tk.val.match(/\|\s*default\s*:\s*['"]([^'"]{2,})['"]/);
-                    if(dm) res.push({
-                      text: dm[1], src: tk.val, display: dm[1], isStyle: false,
-                      isLiquidFull: true, liquidToken: tk.val
-                    });
-                    continue;
-                  }
-                  // NÃO usar isStyle/outerKey aqui: o outerKey reconstrói "openTag+clean+closeTag"
-                  // como se ESTE fragmento sozinho fosse todo o conteúdo entre as tags de estilo —
-                  // mas quando o conteúdo é misto (texto + Liquid), a tag de estilo real no HTML
-                  // envolve o BLOCO INTEIRO (todos os fragmentos juntos), não cada pedaço separado.
-                  // Esse outerKey fabricado nunca existe de verdade no documento, então
-                  // buildTaggedHtml() nunca encontra onde inserir a tradução e a linha some do
-                  // export (mesmo continuando visível e editável na tabela do CSV). Tratando como
-                  // uma linha comum (isStyle:false), a busca usa o texto puro do fragmento — que
-                  // esse sim existe literalmente dentro da tag de estilo já presente no HTML.
-                  const clean = tk.val.replace(/&nbsp;/gi,'').replace(/&#160;/g,'').trim();
-                  if(clean.length>=2) res.push({text:clean, src:clean, display:clean, isStyle:false});
-                }
+              if(innerHasLiquid && innerTokens.length === 1){
+                // Liquid sozinho dentro da tag de estilo (sem texto de verdade ao redor) —
+                // mesmo tratamento do caso "standalone" fora de tags de estilo: o fallback
+                // vira conteúdo traduzível próprio.
+                const tk = innerTokens[0];
+                const dm = tk.val.match(/\|\s*default\s*:\s*['"]([^'"]{2,})['"]/);
+                // display: placeholder legível, só pro preview visual final. text (o que vai
+                // pro CSV/grade): a tag CRUA, exatamente como está no HTML.
+                const dispTag = dm ? dm[1] : toLiquidPlaceholder(tk.val);
+                res.push({
+                  text: tk.val, src: tk.val, display: dispTag, isStyle: false,
+                  isLiquidFull: true, liquidToken: tk.val
+                });
+              } else if(innerHasLiquid && innerTokens.some(isConditionalBoundary)){
+                // {% if/elsif/else %} dentro da tag de estilo — ramos mutuamente exclusivos,
+                // cada um vira sua própria linha (o wrapper de estilo único não corresponde a
+                // nenhum ramo específico, então essas linhas saem como texto simples).
+                for(const branchTokens of splitTokensByConditional(innerTokens)) emitBranchRows(branchTokens, res);
               } else {
-                res.push({text:innerTextOnly, src:inner, display:innerTextOnly, isStyle:true,
+                // Liquid misturado com texto de verdade dentro da tag de estilo SEM
+                // content_blocks (ex: um <strong>Oi {{custom_attribute.${first_name}
+                // |default:'você'}}</strong>, ou {{context.offer_trial_duration}}), OU sem
+                // Liquid nenhum — nos dois casos vira UMA linha só, com o que tiver de Liquid
+                // preservado ao pé da letra dentro de "inner" (que já existe literalmente no
+                // documento como openTag+inner+closeTag). Antes o caso misto fragmentava em
+                // várias linhas soltas; agora quem traduz vê a frase inteira de uma vez.
+                res.push({text:mergeLiquidInline(inner), src:inner, display:toLiquidPlaceholder(inner), isStyle:true,
                   outerKey, openTag:frame.openTag, closeTag:frame.closeTag});
               }
             }
@@ -5568,10 +5719,16 @@ function extractStr() {
     }
 
     // Skip pure Liquid control tags (no real text possible)
-    const isPureControl = /^\s*\{%[-\s]*(?:assign|capture|endcapture|endif|endfor|endunless|endcase|render|include)/i.test(t);
+    const isPureControl = /^\s*\{%[-\s]*(?:assign|capture|endcapture|endif|endfor|endunless|endcase|case|when|render|include)/i.test(t);
     // Measure real text after stripping all Liquid
     const textOnly = stripLiquid(t);
-    const isEffectivelyEmpty = textOnly.length < 4;
+    // Uma merge tag {{...}} SOZINHA (sem texto nenhum ao redor, ex: "{{ partner_1_name }}")
+    // sempre fica com textOnly vazio (stripLiquid apaga a tag inteira) — sem essa exceção,
+    // "isEffectivelyEmpty" descartava a linha ANTES até de chegar no tratamento de Liquid
+    // sozinho logo abaixo, fazendo a tag sumir do CSV sem deixar rastro nenhum.
+    const soleTokens = splitLiquid(t);
+    const isSoleMergeTag = soleTokens.length === 1 && soleTokens[0].type === 'liquid' && soleTokens[0].val.startsWith('{{') && isRecognizedMergeTag(soleTokens[0].val);
+    const isEffectivelyEmpty = textOnly.length < 4 && !isSoleMergeTag;
 
     if(isPureControl || isEffectivelyEmpty){
       if(styleStack.length>0) styleStack[styleStack.length-1].parts.push(tok);
@@ -5584,32 +5741,40 @@ function extractStr() {
       const tokens = splitLiquid(t);
       const hasLiquid = tokens.some(tk => tk.type==='liquid');
 
-      if(hasLiquid){
-        // Mixed text+Liquid: keep text parts; for custom_attribute with default, wrap the
-        // WHOLE Liquid expression as one translatable unit — not just the fallback text.
-        // Before: {{custom_attribute.${client_name} | default: 'your company'}}
-        //         → translatable unit = "your company"   ← old behaviour (wrong)
-        // After:  {{custom_attribute.${client_name} | default: 'your company'}}
-        //         → translatable unit = full Liquid expression   ← new behaviour
-        for(const tk of tokens){
-          if(tk.type==='liquid'){
-            const dm = tk.val.match(/\|\s*default\s*:\s*['"]([^'"]{2,})['"]/);
-            if(dm) res.push({
-              text: dm[1],          // display/source text = the default fallback (human-readable)
-              src: tk.val,          // the FULL Liquid expression is the unit to tag
-              display: dm[1],       // shown to translator in the src column
-              isStyle: false,
-              isLiquidFull: true,   // tells buildTaggedHtml to wrap the whole expression
-              liquidToken: tk.val
-            });
-            continue;
-          }
-          const clean = tk.val.replace(/&nbsp;/gi,'').replace(/&#160;/g,'').trim();
-          if(clean.length >= 2) res.push({text:clean, src:clean, display:clean, isStyle:false});
-        }
+      if(hasLiquid && tokens.length === 1){
+        // Liquid SOZINHO (nenhum texto de verdade ao redor) — ex: uma célula de conteúdo
+        // que é só {{custom_attribute.${client_name} | default: 'your company'}}. Aqui faz
+        // sentido tratar o fallback como conteúdo traduzível de verdade (é texto de negócio,
+        // tipo nome de plano/oferta), então vira sua própria linha, igual já funcionava.
+        const tk = tokens[0];
+        const dm = tk.val.match(/\|\s*default\s*:\s*['"]([^'"]{2,})['"]/);
+        // Sem "| default: '...'" (ex: {{ partner_1_name }}, uma variável de Liquid pura sem
+        // fallback) — antes disso simplesmente NADA era criado, e a tag sumia sem deixar
+        // rastro nenhum no CSV. Ainda vira sua própria linha, usando um placeholder legível
+        // como texto (não tem um "valor padrão" de verdade pra mostrar, mas pelo menos a
+        // posição fica visível e rastreável pra quem tá revisando o CSV).
+        const display = dm ? dm[1] : toLiquidPlaceholder(tk.val);
+        res.push({
+          text: tk.val, src: tk.val, display, isStyle: false,
+          isLiquidFull: true, liquidToken: tk.val
+        });
+      } else if(hasLiquid && tokens.some(isConditionalBoundary)){
+        // {% if/elsif/else %} misturado com texto — ramos mutuamente exclusivos (só um é
+        // exibido de cada vez), então cada ramo vira sua própria linha, com o merge de
+        // custom_attribute/context acontecendo só dentro do ramo em si.
+        for(const branchTokens of splitTokensByConditional(tokens)) emitBranchRows(branchTokens, res);
       } else {
-        // No Liquid — plain text
-        if(textOnly.length >= 2) res.push({text:textOnly, src:t, display:textOnly, isStyle:false});
+        // Liquid MISTURADO com texto de verdade SEM content_blocks (ex: "Hi {{custom_attribute
+        // .${first_name}|default:'there'}}, welcome!" ou "Enjoy your
+        // {{context.offer_trial_duration}} days"), OU sem Liquid nenhum — nos dois casos vira
+        // UMA linha só. Antes o caso misto quebrava a frase em várias linhas separadas no CSV,
+        // obrigando quem traduz a mexer em pedaços soltos sem ver a frase inteira. Agora o
+        // merge tag fica preservado ao pé da letra dentro do texto (src = a frase crua, com a
+        // tag Liquid junto) — a pessoa traduz a frase toda e só reposiciona a tag onde fizer
+        // sentido na gramática do idioma dela. O texto de exibição (pra não confundir no grid)
+        // troca a tag Liquid por um placeholder legível tipo {trial_duration}; o valor real só
+        // aparece de fato no preview final, via replaceLiquidPlaceholders().
+        if(textOnly.length >= 2) res.push({text:mergeLiquidInline(t), src:t, display:toLiquidPlaceholder(t), isStyle:false});
       }
     }
   }
@@ -6141,7 +6306,10 @@ function rowsHTML() {
       </tr>`;
     }
     const id  = (row.id||'').replace(/"/g,'&quot;');
-    const displaySrc = (row.src||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+    // Mesmo texto que vai pro CSV exportado (csvSourceText) — sem isso, a grade principal
+    // (o que a pessoa realmente olha pra traduzir) mostrava o Liquid cru (content_blocks,
+    // custom_attribute, context) no meio da frase, mesmo já tendo sido "limpo" só no CSV.
+    const displaySrc = csvSourceText(row).replace(/</g,'&lt;').replace(/"/g,'&quot;');
     const origLang = S.allC.find(c=>c.code===S.origin)?.lang||null;
     const tls = S.csv.langs.map(l=>{
       const v=(row.translations[l]||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');
@@ -7015,7 +7183,6 @@ function buildPreviewHtml(lang){
   // Step 1: strip any existing Liquid translation tags (from tagged HTML imports)
   html=html.replace(/\{%translation\s+\S+?%\}/g,'').replace(/\{%endtranslation%\}/g,'');
 
-  html=replaceLiquidPlaceholders(html);
   html=renderFooterPlaceholder(html);
   html=annotateConditionals(html);
   // Strip {% assign partner_X_id = ... %} tags only — purely declarative, never visible
@@ -7034,6 +7201,10 @@ function buildPreviewHtml(lang){
   // isImg rows mark the src="..." attribute value inside the <img> tag.
   // After replacing occurrence 0 of a key, the original text is gone from that spot,
   // so the next row with the same key naturally finds occurrence 1. No counters needed.
+  // Linhas cujo src/outerKey/imgTag não bate literalmente no HTML — não trava nada (o preview
+  // segue rendendo o resto normal), mas fica registrado no console pra dar pra investigar
+  // em vez de simplesmente "sumir" sem deixar rastro nenhum.
+  const previewMissed = [];
   S.csv.rows.forEach(row=>{
     const placeholder = `__TID_${row.id}__`;
     if(row.isImg && row.src){
@@ -7056,11 +7227,11 @@ function buildPreviewHtml(lang){
           }
         }
       }
-      if(imgStart === -1) return;
+      if(imgStart === -1){ previewMissed.push(row); return; }
       html = html.slice(0, imgStart) + `__IMGTAG_${row.id}__` + html.slice(imgEnd);
     } else {
       const key = (row.isStyle && row.outerKey) ? row.outerKey : row.src;
-      if(!key) return;
+      if(!key){ previewMissed.push(row); return; }
       const marker = row.isStyle
         ? `${row.openTag}${placeholder}${row.closeTag}`
         : placeholder;
@@ -7080,10 +7251,13 @@ function buildPreviewHtml(lang){
         }
         pos = p; break;
       }
-      if(pos === -1) return;
+      if(pos === -1){ previewMissed.push(row); return; }
       html = html.slice(0, pos) + marker + html.slice(pos + key.length);
     }
   });
+  if(previewMissed.length){
+    console.warn(`[buildPreviewHtml] ${previewMissed.length} linha(s) não encontrada(s) no HTML pro idioma "${lang}":`, previewMissed.map(r=>({id:r.id, src:(r.src||'').slice(0,80)})));
+  }
 
   // Pass B — swap placeholders for real content with display values
   S.csv.rows.forEach(row=>{
@@ -7100,12 +7274,25 @@ function buildPreviewHtml(lang){
       if(!html.includes(placeholder)) return;
       // Para linhas isLiquidFull, o src é a expressão Liquid inteira — no preview, mostramos
       // o texto humano legível (display = fallback do default), não a expressão crua.
+      // Fallback (sem tradução, ou vendo o idioma original) precisa ser o MESMO texto que
+      // aparece no CSV/grid (row.text — com o "default" já preenchido, ex: "there"), não
+      // row.display (que é só o placeholder tipo "{first_name}", usado pro rótulo compacto
+      // do grid) — senão o preview mostra um texto diferente do que a pessoa vê no CSV.
       const displayText = (!isOrig && row.translations[lang])
         ? row.translations[lang]
-        : (row.display || row.src);
+        : (row.text || row.display || row.src);
       html = html.replace(placeholder, `<span data-tid="${row.id}">${displayText}</span>`);
     }
   });
+
+  // Só DEPOIS das duas passadas (Pass A/B) é que troca os merge tags Liquid por placeholders
+  // legíveis — se rodasse antes, o texto de uma linha que tem um merge tag EMBUTIDO no meio
+  // (ex: "Hi {{custom_attribute.${first_name}|default:'there'}}, welcome!") deixava de bater
+  // literalmente com row.src na hora do Pass A encontrar onde marcar o __TID_n__, e a
+  // linha inteira ficava sem a tradução aplicada (mostrava sempre o texto de origem cru).
+  // Rodando por último, cobre tanto o texto que sobrou fora de qualquer linha traduzível
+  // quanto qualquer merge tag que a própria tradução carregue dentro dela.
+  html = replaceLiquidPlaceholders(html);
 
   // CSS das badges de if/else/unless injetada no <head> (ou no início, se não houver <head>) —
   // precisa viver dentro do próprio documento do iframe, já que os <span> ficam no conteúdo.
@@ -7326,9 +7513,13 @@ function buildTaggedHtml() {
   }
   let tagged = S.rawHtml;
   const allRows = S.csv.rows.filter(r=>r.src||(r.isStyle&&r.outerKey));
+  // Linhas que não conseguimos encontrar/tagueiar no HTML final — sem isso, a linha some do
+  // export em silêncio e a pessoa acha que a tradução foi aplicada quando não foi.
+  const missed = [];
   allRows.forEach(r=>{
     if(r.isImg && r.imgTag){
-      const pos = tagged.indexOf(r.imgTag); if(pos === -1) return;
+      const pos = tagged.indexOf(r.imgTag);
+      if(pos === -1){ missed.push(r); return; }
       const newImgTag = r.imgTag.replace(/\bsrc=(?:"[^"]*"|'[^']*')/i, `src="{%translation ${r.id}%}${r.src}{%endtranslation%}"`);
       tagged = tagged.slice(0, pos) + newImgTag + tagged.slice(pos + r.imgTag.length);
       return;
@@ -7338,7 +7529,7 @@ function buildTaggedHtml() {
     // {%translation idN%}{{custom_attribute.${x} | default: 'y'}}{%endtranslation%}
     if((r.isLiquidFull || r.isLiquidDefault) && r.liquidToken){
       const key = r.liquidToken;
-      let searchFrom = 0;
+      let searchFrom = 0, tagged_ok = false;
       while(searchFrom < tagged.length){
         const pos = tagged.indexOf(key, searchFrom);
         if(pos === -1) break;
@@ -7352,16 +7543,18 @@ function buildTaggedHtml() {
         const closes = (before.match(/\{%endtranslation%\}/g)||[]).length;
         if(opens > closes){ searchFrom = pos + key.length; continue; }
         tagged = tagged.slice(0, pos) + `{%translation ${r.id}%}${key}{%endtranslation%}` + tagged.slice(pos + key.length);
+        tagged_ok = true;
         break;
       }
+      if(!tagged_ok) missed.push(r);
       return;
     }
     const key = r.isStyle&&r.outerKey ? r.outerKey : r.src;
-    if(!key) return;
+    if(!key){ missed.push(r); return; }
     const replacement = r.isStyle
       ? `${r.openTag}{%translation ${r.id}%}${r.src}{%endtranslation%}${r.closeTag}`
       : `{%translation ${r.id}%}${r.src}{%endtranslation%}`;
-    let searchFrom = 0;
+    let searchFrom = 0, tagged_ok = false;
     while(searchFrom < tagged.length){
       const pos = tagged.indexOf(key, searchFrom);
       if(pos === -1) break;
@@ -7380,9 +7573,15 @@ function buildTaggedHtml() {
       const closes = (before.match(/\{%endtranslation%\}/g)||[]).length;
       if(opens > closes){ searchFrom = pos + key.length; continue; }
       tagged = tagged.slice(0, pos) + replacement + tagged.slice(pos + key.length);
+      tagged_ok = true;
       break;
     }
+    if(!tagged_ok) missed.push(r);
   });
+  if(missed.length){
+    console.warn(`[buildTaggedHtml] ${missed.length} linha(s) não encontrada(s) no HTML e ficaram de fora do export:`, missed.map(r=>({id:r.id, src:(r.src||'').slice(0,80)})));
+    if(typeof showNotif === 'function') showNotif(`${missed.length} linha(s) não foram encontradas no HTML e ficaram sem tradução no export — veja o console para detalhes.`, 'warn');
+  }
   return tagged;
 }
 
