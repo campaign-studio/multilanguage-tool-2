@@ -703,7 +703,17 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
 .reply-input-box textarea:focus{outline:none;border-color:var(--accent);}
 #commentText{width:100%;min-height:64px;border:1.5px solid var(--border-s);border-radius:8px;padding:8px;font-size:12.5px;font-family:var(--sans);resize:vertical;}
 #commentText:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--acc-bg);}
-.mention-dropdown{display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 20px rgba(20,20,40,.16);max-height:160px;overflow-y:auto;z-index:610;}
+/* position:fixed de propósito — left/top/width vêm de inline style, calculados em JS a
+   partir da textarea ativa (ver renderMentionDropdown). Nunca mais position:absolute
+   relativo a um pai reparentado — ver comentário no HTML de onde este elemento vive.
+   z-index precisa ficar ACIMA de qualquer contexto onde o @menção pode ser usado — o
+   comentário do CSV builder abre dentro de .modal-ov (z-index:9000) e o da Approval View
+   dentro de #approvalView (z-index:8000); com z-index:610 o dropdown pintava ATRÁS dos
+   dois (fixed+z-index nos dois cria um novo stacking context que vence por z-index, não
+   por ordem no DOM) — ficava logicamente "aberto" (display/class corretos) mas invisível
+   e inclicável, então o clique numa sugestão sempre vazava pro que estivesse desenhado
+   por cima dele de verdade. */
+.mention-dropdown{display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 20px rgba(20,20,40,.16);max-height:160px;overflow-y:auto;z-index:9998;}
 .mention-dropdown.open{display:block;}
 .mention-item{display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:12px;cursor:pointer;}
 .mention-item:hover,.mention-item.hl{background:var(--acc-bg);}
@@ -817,9 +827,6 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
 .av-pin.resolved{background:var(--green);}
 .av-pin.hl{outline:3px solid rgba(59,130,246,.6);outline-offset:1px;}
 .av-newpin-box{position:absolute;z-index:10;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px;width:240px;}
-.av-newpin-box textarea{width:100%;min-height:56px;border:1.5px solid var(--border-s);border-radius:7px;padding:7px;font-size:12px;font-family:var(--sans);resize:vertical;}
-.av-newpin-box textarea:focus{outline:none;border-color:var(--accent);}
-.av-newpin-actions{display:flex;gap:6px;margin-top:8px;justify-content:flex-end;align-items:center;}
 .av-newpin-quote{font-size:11px;font-style:italic;color:var(--text2);background:var(--s2);border-left:2.5px solid var(--accent);padding:5px 8px;border-radius:0 6px 6px 0;margin-bottom:7px;max-height:60px;overflow-y:auto;}
 .av-comment-quote{font-size:11px;font-style:italic;color:var(--text2);background:var(--surface);border-left:2.5px solid var(--accent);padding:5px 8px;border-radius:0 6px 6px 0;margin-bottom:6px;}
 .av-edit-btn{font-size:10.5px;font-weight:700;color:var(--text3);background:none;border:none;cursor:pointer;font-family:var(--sans);padding:0;}
@@ -1402,7 +1409,6 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
       <div id="commentThread" class="comment-thread"></div>
       <div style="position:relative;">
         <textarea id="commentText" placeholder="Write a comment… type @ to mention someone" oninput="handleMentionInput(event)" onkeydown="handleMentionKeydown(event)"></textarea>
-        <div id="mentionDropdown" class="mention-dropdown"></div>
       </div>
       <div class="actions" style="margin-top:10px;">
         <button class="btn-next" style="margin-top:0;" onclick="event.stopPropagation();postNewComment()">Post</button>
@@ -1410,6 +1416,18 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
     </div>
   </div>
 </div>
+
+<!-- Dropdown de sugestão de @menção — ÚNICO pro app inteiro (comentário de célula, pin da
+     Approval View, resposta). Fica AQUI, direto sob <body>, de propósito — nunca dentro de
+     um modal/caixa que pode estar escondido (display:none) ou ser destruído/reconstruído
+     (.remove()/innerHTML=) no meio do fluxo. Posicionado via position:fixed + coordenadas
+     calculadas em JS (ver renderMentionDropdown), nunca reparentado pela árvore do DOM —
+     isso evitava um bug real: mover o nó pra dentro da caixa de comentário ativa quebrava o
+     guard "cliquei dentro da caixa de comentário?" de outros lugares (ex: o pan/zoom da
+     Approval View, que usa e.target.closest('.av-newpin-box') — como o dropdown não era
+     mais descendente da caixa no momento em que esse guard rodava, ele achava que o clique
+     tinha sido "fora", e o pan iniciava sozinho toda vez que alguém era mencionado). -->
+<div id="mentionDropdown" class="mention-dropdown"></div>
 
 <!-- TOP NAVBAR (blue, always visible) -->
 <div class="topbar">
@@ -3074,7 +3092,13 @@ function renderDashboard() {
   // sempre (um e-mail só), sem mudar nada do jeito que já funcionavam.
   const projects = projGetAll().filter(p => p.kind !== 'campaign');
   const mine = sortDashProjects(projects.filter(p => p.owner.toLowerCase() === me.email.toLowerCase()));
-  const shared = sortDashProjects(projects.filter(p => p.owner.toLowerCase() !== me.email.toLowerCase() && (p.sharedWith||[]).some(e => e.toLowerCase() === me.email.toLowerCase())));
+  // "Shared with me" é só pra quem tem papel de EDITOR — approver sempre entra em
+  // sharedWith por baixo dos panos (ver comentário em setMemberRole, é assim que o resto
+  // do app decide acesso), mas isso não deve aparecer duplicado aqui; approver-only já
+  // tem sua própria lista logo abaixo ("To approve").
+  const shared = sortDashProjects(projects.filter(p => p.owner.toLowerCase() !== me.email.toLowerCase()
+    && (p.sharedWith||[]).some(e => e.toLowerCase() === me.email.toLowerCase())
+    && !(p.approvers||[]).some(e => e.toLowerCase() === me.email.toLowerCase())));
   // Projetos onde a pessoa é approver — aparecem aqui mesmo se ela também for sharedWith,
   // pra ficar fácil achar o que falta revisar sem precisar procurar em "Shared with me".
   const toApprove = sortDashProjects(projects.filter(p => p.owner.toLowerCase() !== me.email.toLowerCase() && (p.approvers||[]).some(e => e.toLowerCase() === me.email.toLowerCase())));
@@ -4055,7 +4079,10 @@ function dlItemCSV() {
   const esc = s => `"${String(s || '').replace(/"/g, '""')}"`;
   const nameRow = [item.name, '', ...langs.map(() => '')].map(esc).join(',');
   const header = ['', 'Translation tags', ...langs].map(esc).join(',');
-  const rows = item.rows.map(r => [r.id, r.src, ...langs.map(l => r.translations[l] || '')].map(esc).join(','));
+  // curlifyApostrophes(csvSourceText(r)) — mesma fonte usada no CSV/HTML de um projeto normal
+  // (ver buildCsvStringForSave/buildTaggedHtml). item.rows é o mesmo objeto de S.csv.rows
+  // (ver activateCampaignItemIntoS), então usar r.src cru aqui tinha exatamente o mesmo bug.
+  const rows = item.rows.map(r => [r.id, curlifyApostrophes(csvSourceText(r)), ...langs.map(l => curlifyApostrophes(r.translations[l] || ''))].map(esc).join(','));
   const csv = [nameRow, header, ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
@@ -5635,6 +5662,10 @@ function restoreProjectContent(data, readOnly) {
     isImg: r.isImg, imgTag: r.imgTag,
     translations: Object.fromEntries(langs.map(l => [l, (byId[r.id] && byId[r.id][l]) || '']))
   }));
+  // Repara na hora projetos tageados antes da correção do buildTaggedHtml (ver comentário em
+  // repairTaggedHtmlDefaults) — reabrir um projeto antigo já entrega o HTML com o texto das
+  // tags de tradução sincronizado com o CSV, sem precisar de nenhuma ação manual.
+  S.rawHtml = repairTaggedHtmlDefaults(S.rawHtml, S.csv.rows);
   S.strings = S.csv.rows.map(r => ({
     src: r.src, isImg: r.isImg, imgTag: null,
     isStyle: false, outerKey: null, openTag: null, closeTag: null
@@ -6928,6 +6959,10 @@ function closeCommentPopover() {
 function renderCommentThread() {
   const wrap = document.getElementById('commentThread');
   if(!wrap || _commentRow === null) return;
+  // Fecha qualquer dropdown de menção aberto antes de reconstruir a thread — #mentionDropdown
+  // mora fora daqui (ver HTML), então não é destruído por este innerHTML, mas continuar
+  // "aberto" apontando pra uma textarea que está prestes a sumir da tela ficaria estranho.
+  closeMentionDropdown();
   const row = S.csv.rows[_commentRow];
   const all = normalizeComments(getCellComments(row, _commentLang));
   const topLevel = all.filter(c => !c.parentId);
@@ -7128,11 +7163,6 @@ function handleMentionInput(e) {
   if(!match) { closeMentionDropdown(); return; }
 
   _mentionTextarea = ta;
-  // The dropdown is a single shared node — reparent it next to whichever textarea is
-  // currently active (cell comment popover, new-pin box, or a reply box) so it renders
-  // right below the caret regardless of where the comment is being written from.
-  const dd = document.getElementById('mentionDropdown');
-  if(dd && ta.parentElement && dd.parentElement !== ta.parentElement) ta.parentElement.appendChild(dd);
   const fragment = match[1].toLowerCase();
   _mentionMatches = getProjectMembersWithNames().filter(m => m.firstName.toLowerCase().startsWith(fragment));
   if(!_mentionMatches.length) { closeMentionDropdown(); return; }
@@ -7141,15 +7171,45 @@ function handleMentionInput(e) {
   renderMentionDropdown();
 }
 
+// Nunca reparenta #mentionDropdown pela árvore do DOM — ele mora fixo direto sob <body>
+// (ver HTML) e só se REPOSICIONA visualmente aqui, com as coordenadas da textarea ativa
+// (_mentionTextarea). Bug real que isso evita: mover o nó pra dentro da caixa de comentário
+// ativa quebrava o guard "esse clique foi dentro da caixa de comentário?" usado em outro
+// lugar (o pan/zoom da Approval View verifica e.target.closest('.av-newpin-box') — como o
+// dropdown deixava de ser descendente da caixa bem no meio do próprio clique, esse guard
+// achava que o clique tinha sido "fora" e o pan iniciava sozinho toda vez que alguém era
+// mencionado, arrastando a tela e dando a impressão de que td "sumia", incluindo os
+// controles de zoom).
+function positionMentionDropdown() {
+  const dd = document.getElementById('mentionDropdown');
+  if(!dd || !_mentionTextarea) return;
+  const rect = _mentionTextarea.getBoundingClientRect();
+  dd.style.left = Math.round(rect.left) + 'px';
+  dd.style.top = Math.round(rect.bottom + 4) + 'px';
+  dd.style.width = Math.round(Math.max(160, Math.min(rect.width, 280))) + 'px';
+}
+
 function renderMentionDropdown() {
   const dd = document.getElementById('mentionDropdown');
   if(!dd) return;
+  // Passa o ÍNDICE pro handler, não o nome cru interpolado direto na string entre aspas
+  // simples do atributo — um nome com apóstrofo (ex: "O'Brien") fechava a aspa ANTES da hora
+  // (virava insertMention('O'Brien'), JS inválido), e o clique não fazia nada, silenciosamente.
+  // Índice é sempre um número — nunca precisa de escaping.
+  // onmousedown só dá preventDefault (evita que o textarea perca o foco/seleção) — NÃO chama
+  // insertMention aqui. Se o item já sumisse nesse momento (fechando o dropdown), o mouseup/click
+  // do mesmo gesto cairia em cima de QUALQUER coisa que estivesse embaixo dele na tela (ex: o
+  // botão "Cancel" da caixinha, que fica logo abaixo do textarea) e disparava o onclick DELE —
+  // era isso que fazia a caixinha inteira sumir ao marcar alguém. Rodando no onclick, o item
+  // ainda existe quando o click dispara (mousedown não o removeu), então o click acerta o
+  // alvo certo e não sobra nenhum clique fantasma pra vazar pro elemento de baixo.
   dd.innerHTML = _mentionMatches.map((m, i) => `
-    <div class="mention-item ${i===_mentionHl?'hl':''}" onmousedown="event.preventDefault();insertMention('${m.firstName}')">
+    <div class="mention-item ${i===_mentionHl?'hl':''}" onmousedown="event.preventDefault();" onclick="insertMention(_mentionMatches[${i}].firstName)">
       <span class="av">${m.firstName.charAt(0).toUpperCase()}</span>
       <span>${m.firstName}</span>
     </div>
   `).join('');
+  positionMentionDropdown();
   dd.classList.add('open');
 }
 
@@ -7188,7 +7248,13 @@ function insertMention(name) {
   // "@Anne-" original duplicado do lado do nome escolhido no dropdown.
   const newBefore = before.replace(/@([A-Za-zÀ-ÿ0-9_'’-]*)$/, `@${name} `);
   ta.value = newBefore + after;
-  ta.focus();
+  // preventScroll: sem isso, refocar a textarea aqui pode fazer o navegador tentar "revelar"
+  // o elemento sozinho num ancestral com overflow:hidden (ex: #avCanvasViewport, na Approval
+  // View) — como esse container usa transform próprio pra pan/zoom, o navegador calcula
+  // errado se o elemento "está fora de vista" e força um scroll extra em cima do pan já
+  // aplicado, arrastando a barra de zoom/scroll horizontal junto (ver comentário em
+  // openNewPinBox).
+  ta.focus({preventScroll:true});
   ta.setSelectionRange(newBefore.length, newBefore.length);
   closeMentionDropdown();
 }
@@ -7232,6 +7298,11 @@ function autosaveProject() {
   // CSV/HTML, e nunca disputam o lock de edição (que é de quem está de fato traduzindo).
   if(!_approverMode) {
     p.data.csv = buildCsvStringForSave();
+    // S.rawHtml já vem reparado (ver repairTaggedHtmlDefaults, chamado em
+    // restoreProjectContent) se este projeto tinha sido tageado antes da correção do
+    // buildTaggedHtml — grava de volta aqui pra o reparo não se perder e o download/preview
+    // continuarem corretos mesmo numa sessão futura, sem depender de recalcular de novo.
+    p.data.html = S.rawHtml;
     p.data.langs = [...S.csv.langs];
     p.data.comments = collectRowComments();
   }
@@ -8177,9 +8248,20 @@ function buildTaggedHtml() {
     }
     const key = r.isStyle&&r.outerKey ? r.outerKey : r.src;
     if(!key){ missed.push(r); return; }
-    // curlifyApostrophes só no CONTEÚDO inserido — "key" continua com o texto original
-    // exato (precisa bater literalmente com o HTML de origem pra achar a posição certa).
-    const srcCurly = curlifyApostrophes(r.src);
+    // "key" continua com o texto CRU original (precisa bater literalmente com o HTML de
+    // origem pra achar a posição certa) — mas o que é INSERIDO como conteúdo da tag de
+    // tradução precisa ser exatamente csvSourceText(r), a MESMA função que gera a coluna
+    // de origem do CSV exportado (ver buildCsvStringForSave). Antes disso usava
+    // curlifyApostrophes(r.src) direto — src cru, sem o colapso de espaço/quebra de linha
+    // interna que mergeLiquidInline() aplica (\s{2,} → um espaço só). Pra qualquer linha
+    // cujo HTML de origem tivesse o texto quebrado em mais de uma linha/indentado no meio
+    // (comum em e-mail escrito à mão), a Braze recebia um HTML com a quebra de linha crua
+    // dentro da tag de tradução, mas um CSV com o mesmo trecho já colapsado num espaço só —
+    // duas strings diferentes por um detalhe de espaço, e a Braze recusava o upload com
+    // "translation file includes default text that doesn't match the message content".
+    // Usando csvSourceText(r) aqui (a mesma função, não uma reimplementação do colapso),
+    // os dois artefatos ficam garantidamente idênticos por construção, não só "parecidos".
+    const srcCurly = curlifyApostrophes(csvSourceText(r));
     const replacement = r.isStyle
       ? `${r.openTag}{%translation ${r.id}%}${srcCurly}{%endtranslation%}${r.closeTag}`
       : `{%translation ${r.id}%}${srcCurly}{%endtranslation%}`;
@@ -8222,6 +8304,28 @@ function buildTaggedHtml() {
     if(typeof showNotif === 'function') showNotif(`${missed.length} linha(s) não foram encontradas no HTML e ficaram sem tradução no export — veja o console para detalhes.`, 'warn');
   }
   return tagged;
+}
+
+// Re-sincroniza o texto DENTRO de cada {%translation idN%}...{%endtranslation%} JÁ EXISTENTE
+// num HTML salvo, pra bater exatamente com csvSourceText() da linha correspondente (a mesma
+// fonte usada pra gerar a coluna de origem do CSV, ver buildCsvStringForSave). Necessário
+// porque um projeto só é tageado UMA VEZ, na criação (buildTaggedHtml, acima) — reabrir/
+// editar/salvar de novo nunca re-tageia o HTML do zero (só criaria tags aninhadas em cima
+// das que já existem), então um projeto tageado ANTES da correção do buildTaggedHtml ficaria
+// com o texto antigo (não colapsado) preso dentro da tag PARA SEMPRE, mesmo com o código já
+// corrigido — o autosave recalcula o CSV a cada save, mas nunca tocava no HTML já salvo.
+// Ignora linhas de imagem (isImg): a tag ali envolve a URL dentro do atributo src=, não
+// texto, e buildTaggedHtml nunca aplicou curlifyApostrophes nesse caso — refazer isso aqui
+// mudaria um comportamento à parte, não relacionado ao mismatch de espaço/quebra de linha.
+function repairTaggedHtmlDefaults(html, rows) {
+  if(!html) return html;
+  const byId = new Map((rows||[]).filter(r=>!r.isImg).map(r => [r.id, r]));
+  return html.replace(/\{%translation\s+(\S+?)%\}([\s\S]*?)\{%endtranslation%\}/g, (match, id, oldInner) => {
+    const row = byId.get(id);
+    if(!row) return match;
+    const fresh = curlifyApostrophes(csvSourceText(row));
+    return fresh === oldInner ? match : `{%translation ${id}%}${fresh}{%endtranslation%}`;
+  });
 }
 
 function openHtmlModal() {
@@ -8275,10 +8379,13 @@ function dlXLSX(){
   const langs = S.csv.langs;
   if(!langs.length){ alert('No language configured.'); return; }
   checkEmptyLangsBeforeExport(() => {
+    // curlifyApostrophes(csvSourceText(r)) — mesma fonte usada no CSV/HTML exportados (ver
+    // buildCsvStringForSave/buildTaggedHtml). Usar r.src cru aqui geraria uma planilha com
+    // texto diferente do CSV/HTML de verdade, pelo mesmo motivo que já quebrou o dlCSV().
     const rows = [
       [S.csv.name, ...Array(langs.length + 1).fill('')],
       ['', 'Translation tags', ...langs.map(l => toBrazeLang(l))],
-      ...S.csv.rows.map(r => [r.id, r.src, ...langs.map(l => r.translations[l] || '')])
+      ...S.csv.rows.map(r => [r.id, curlifyApostrophes(csvSourceText(r)), ...langs.map(l => curlifyApostrophes(r.translations[l] || ''))])
     ];
     const ws = XLSX.utils.aoa_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -8335,17 +8442,14 @@ function dlCSV(){
   const langs = S.csv.langs;
   if(!langs.length){ alert('No language configured.'); return; }
   checkEmptyLangsBeforeExport(() => {
-    const esc = v => `"${String(v||'').replace(/"/g,'""')}"`;
-    // Braze format: row0 = template name + empty cols, row1 = ,Translation tags,lang1,...
-    const emptyCols = langs.map(()=>'').join(',');
-    const lines = [
-      esc(S.csv.name) + ',' + emptyCols,
-      ',' + esc('Translation tags') + ',' + langs.map(l=>toBrazeLang(l)).join(','),
-      ...S.csv.rows.map(r =>
-        r.id + ',' + esc(r.src) + ',' + langs.map(l=>esc(r.translations[l]||'')).join(',')
-      )
-    ];
-    trigDL('\uFEFF' + lines.join('\n'), `${S.csv.name}_translations.csv`, 'text/csv;charset=utf-8;');
+    // Reusa buildCsvStringForSave() em vez de remontar o CSV aqui \u2014 essa fun\u00E7\u00E3o reimplementava
+    // a mesma l\u00F3gica s\u00F3 que com r.src CRU (sem curlifyApostrophes, sem passar por
+    // csvSourceText/mergeLiquidInline pra colapsar espa\u00E7o/quebra de linha interna). Isso fazia
+    // o CSV baixado por esse bot\u00E3o divergir do HTML gerado por buildTaggedHtml (que usa
+    // csvSourceText), reproduzindo o mesmo erro de "mismatch" da Braze mesmo depois da
+    // corre\u00E7\u00E3o do buildTaggedHtml \u2014 o usu\u00E1rio baixa o CSV s\u00F3 por aqui, ent\u00E3o a corre\u00E7\u00E3o de l\u00E1
+    // sozinha n\u00E3o bastava. Usando a MESMA fun\u00E7\u00E3o nos dois lugares, n\u00E3o tem como divergir de novo.
+    trigDL(buildCsvStringForSave(), `${S.csv.name}_translations.csv`, 'text/csv;charset=utf-8;');
   });
 }
 
@@ -8884,7 +8988,10 @@ function avViewportWheel(e) {
 // Distingue "clique" (abre um comentário novo) de "arrastar" (só navega o canvas) —
 // mesma lógica de qualquer ferramenta de whiteboard: só é clique se o cursor mal se moveu.
 function avViewportMouseDown(e) {
-  if(e.target.closest('.av-pin') || e.target.closest('.av-newpin-box')) return;
+  // #mentionDropdown mora fora da .av-newpin-box/.reply-input-box (ver comentário no HTML
+  // dele) — sem essa checagem separada, clicar numa sugestão de @menção não batia em nenhum
+  // dos dois closest() acima, e o pan da tela iniciava sozinho a cada menção escolhida.
+  if(e.target.closest('.av-pin') || e.target.closest('.av-newpin-box') || e.target.closest('#mentionDropdown')) return;
   _avPan.active = true;
   _avPan.moved = false;
   _avPan.startX = e.clientX;
@@ -9122,18 +9229,41 @@ function openNewPinBox(vp, x, y, xPct, yPct, lang, quote, rowId) {
   box.style.left = Math.max(4, x) + 'px';
   box.style.top = (y + 12) + 'px';
   const esc = s => String(s || '').replace(/</g, '&lt;');
+  // Mesma estrutura dos outros comentários do app (thread do CSV builder e sidebar da Approval
+  // View): linha textarea+botão lado a lado (.av-reply-input-box), não textarea com uma linha
+  // de botões EMBAIXO. Aquele layout antigo colocava o botão "Cancel" bem onde o dropdown de
+  // @menção aparece (logo abaixo do textarea) — como a caixa é estreita (240px), o dropdown
+  // cobria a largura quase toda, e ao MARCAR alguém (mousedown fecha o dropdown antes do
+  // mouseup/click completar o gesto), esse clique vazava pro botão que ficava exposto embaixo,
+  // fechando a caixa inteira. Com o botão ao LADO do textarea (não embaixo), não sobra nada
+  // clicável na área onde o dropdown se posiciona.
+  const editBtn = (rowId && isCurrentProjectOwner())
+    ? `<button class="av-edit-btn" style="margin-bottom:6px;" onclick="event.stopPropagation();openAvEditModal('${rowId}','${lang}')">✎ Edit text</button>`
+    : '';
   box.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:2px;">
+      <button class="comment-del-btn" title="Cancel" onclick="event.stopPropagation();closeNewPinBox()">×</button>
+    </div>
     ${quote ? `<div class="av-newpin-quote">${esc(quote)}</div>` : ''}
-    <textarea id="avNewPinText" placeholder="Leave a comment… type @ to mention someone" oninput="handleMentionInput(event)" onkeydown="handleMentionKeydown(event)"></textarea>
-    <div class="av-newpin-actions">
-      ${rowId && isCurrentProjectOwner() ? `<button class="btn-back av-edit-inline-btn" style="padding:5px 10px;font-size:11px;margin-right:auto;" onclick="event.stopPropagation();openAvEditModal('${rowId}','${lang}')">✎ Edit text</button>` : ''}
-      <button class="btn-back" style="padding:5px 10px;font-size:11px;" onclick="event.stopPropagation();closeNewPinBox()">Cancel</button>
-      <button class="btn-go" style="padding:5px 12px;font-size:11px;" onclick="event.stopPropagation();submitNewPin()">Post</button>
+    ${editBtn}
+    <div class="av-reply-input-box">
+      <textarea id="avNewPinText" placeholder="Leave a comment… type @ to mention someone" oninput="handleMentionInput(event)" onkeydown="handleMentionKeydown(event)"></textarea>
+      <button class="btn-go" style="padding:6px 10px;font-size:11px;" onclick="event.stopPropagation();submitNewPin()">Post</button>
     </div>
   `;
   box.onclick = e2 => e2.stopPropagation();
   vp.appendChild(box);
-  setTimeout(() => document.getElementById('avNewPinText')?.focus(), 0);
+  // preventScroll: true é ESSENCIAL aqui — #avCanvasViewport tem overflow:hidden, mas isso
+  // não impede o navegador de ajustar seu scrollTop/scrollLeft sozinho pra "revelar" o
+  // elemento que acabou de ganhar foco (overflow:hidden ainda é uma scroll container pra
+  // fins de foco, só não deixa a PESSOA rolar manualmente). O app já faz seu próprio pan/zoom
+  // via transform em #avCanvas — o navegador não sabe disso e calcula a posição do textarea
+  // em coordenadas de layout SEM considerar esse transform, então "acha" que o textarea está
+  // fora da área visível (mesmo quando não está) e força um scroll próprio em cima do pan já
+  // aplicado. Como .av-zoom-controls/.av-hscroll moram no MESMO container (só posicionados
+  // via position:absolute), esse scroll extra arrasta os dois juntos — era isso que fazia a
+  // barra de zoom "subir" sempre que a caixa de comentário ganhava foco.
+  setTimeout(() => document.getElementById('avNewPinText')?.focus({preventScroll:true}), 0);
 }
 
 function closeNewPinBox() {
@@ -9224,6 +9354,10 @@ function renderApprovalSidebar() {
   const countEl = document.getElementById('avCommentCount');
   const list = document.getElementById('avSidebarList');
   if(!list) return;
+  // Fecha qualquer dropdown de menção aberto antes de reconstruir a lista — #mentionDropdown
+  // mora fora daqui (ver HTML), então não é destruído por este innerHTML, mas continuar
+  // "aberto" apontando pra uma caixa de resposta que está prestes a sumir ficaria estranho.
+  closeMentionDropdown();
   const all = S.approvalComments;
   const topLevel = all.filter(c => !c.parentId).sort((a, b) => b.createdAt - a.createdAt);
   if(countEl) countEl.textContent = all.length ? String(all.length) : '';
@@ -9332,7 +9466,9 @@ function toggleApprovalReplyBox(id) {
   if(!box) return;
   const open = box.style.display === 'flex';
   box.style.display = open ? 'none' : 'flex';
-  if(!open) setTimeout(() => box.querySelector('textarea')?.focus(), 0);
+  // preventScroll — ver comentário em openNewPinBox (mesmo #avCanvasViewport com overflow:
+  // hidden + pan via transform, mesmo risco do foco puxar um scroll nativo indesejado).
+  if(!open) setTimeout(() => box.querySelector('textarea')?.focus({preventScroll:true}), 0);
 }
 
 function postApprovalReply(parentId, btn) {
