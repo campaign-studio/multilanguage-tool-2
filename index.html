@@ -774,6 +774,10 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
 .av-frame-lang{font-size:10px;color:var(--text3);font-family:var(--mono);font-weight:500;}
 .av-frame-origin-badge{font-size:9px;font-weight:700;background:var(--green);color:#fff;border-radius:4px;padding:2px 6px;text-transform:uppercase;letter-spacing:.04em;}
 .av-frame-count{font-size:10px;font-weight:700;color:var(--accent);background:var(--acc-bg);border:1px solid var(--acc-bd);border-radius:10px;padding:2px 8px;}
+.av-cb-toggle{display:flex;gap:1px;background:var(--s2);border-radius:6px;padding:1px;user-select:auto;}
+.av-cb-btn{font-size:9px;font-weight:600;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:5px;font-family:var(--sans);text-transform:uppercase;letter-spacing:.03em;transition:background .12s,color .12s;}
+.av-cb-btn:hover{color:var(--text2);}
+.av-cb-btn.active{background:#fff;color:var(--accent);box-shadow:0 1px 2px rgba(20,20,40,.1);}
 .av-frame-viewport{position:relative;background:#fff;border-radius:6px;box-shadow:0 2px 16px rgba(0,0,0,.18);overflow:visible;}
 .av-frame-viewport iframe{border:none;width:100%;display:block;pointer-events:auto;background:#fff;}
 /* Push: sem "cartão" de fundo — só o balão de notificação flutuando, lado a lado por país */
@@ -5772,14 +5776,13 @@ function onFile(f) {
 // uma variável que já foi populada antes via {% assign %} — também não é algo que precise (ou
 // deva) ser traduzido, então também é ignorada.
 //
-// context.first_paid_plan_price é um NÚMERO/preço puro (normalmente aparece colado num
-// content_blocks de moeda, tipo "{{content_blocks.${currency}}}{{context.first_paid_plan_price}}"
-// formando "$29.99") — não é texto de negócio pra traduzir, então é ignorado igual content_blocks.
-function isIgnoredContextField(val) {
-  return /context\.\$?\{?first_paid_plan_price\}?/i.test(val);
-}
+// context.first_paid_plan_price é reconhecido igual qualquer outro context.* — apesar de ser
+// um número/preço puro (normalmente aparece colado num content_blocks de moeda, tipo
+// "{{content_blocks.${currency}}}{{context.first_paid_plan_price}}" formando "$29.99"), ele
+// precisa aparecer na linha traduzível do CSV: a posição do preço dentro da frase pode mudar
+// de idioma pra idioma (ex: símbolo de moeda antes vs depois do número), então quem traduz
+// precisa ver e poder reposicionar a tag, não só um buraco onde ela costumava estar.
 function isRecognizedMergeTag(val) {
-  if(isIgnoredContextField(val)) return false;
   if(/\{\{\s*(?:custom_attribute|context|event_properties|recipient)\s*\./.test(val)) return true;
   // Uma tag "solta" tipo {{ ${first_name} | default: 'Hey' }} — sem namespace, mas COM um
   // filtro "| default:" — é bem provavelmente um merge tag de negócio de verdade (ex:
@@ -5851,9 +5854,9 @@ function splitTokensByConditional(tokens) {
   if(current.length) branches.push(current);
   return branches;
 }
-// Uma merge tag IGNORADA (content_blocks, tag solta de assign, ou um campo específico tipo
-// context.first_paid_plan_price) que aparece NO MEIO de uma frase é uma FRONTEIRA: separa o
-// texto antes e depois dela em linhas diferentes, em vez de só sumir e deixar um buraco no
+// Uma merge tag IGNORADA (content_blocks, ou tag solta de assign) que aparece NO MEIO de
+// uma frase é uma FRONTEIRA: separa o texto antes e depois dela em linhas diferentes, em
+// vez de só sumir e deixar um buraco no
 // meio de uma linha só. Ex: "...starting at {{content_blocks...}}{{context.first_paid_plan_
 // price}}/month." vira DUAS linhas — "...starting at" e "/month." — sem nenhuma linha pra a
 // tag ignorada em si (ela não é texto, é só um valor de negócio que varia por usuário/plano).
@@ -6090,7 +6093,7 @@ function extractStr() {
                 // nenhum ramo específico, então essas linhas saem como texto simples).
                 for(const branchTokens of splitTokensByConditional(innerTokens)) emitBranchRows(branchTokens, res);
               } else if(innerHasLiquid && innerTokens.some(isIgnoredMergeToken)){
-                // Tag ignorada (content_blocks, first_paid_plan_price...) no MEIO do texto
+                // Tag ignorada (content_blocks...) no MEIO do texto
                 // estilizado — mesma fronteira de sempre: separa em linhas antes/depois dela.
                 // O wrapper de estilo único não corresponde a nenhum dos dois pedaços, então
                 // saem como texto simples (igual o caso do if/elsif/else acima).
@@ -6205,8 +6208,8 @@ function extractStr() {
         // {{context.offer_trial_duration}} days"), OU sem Liquid nenhum — vira UMA linha só,
         // com o merge tag preservado ao pé da letra dentro do texto (src = a frase crua, com a
         // tag Liquid junto) — a pessoa traduz a frase toda e só reposiciona a tag onde fizer
-        // sentido na gramática do idioma dela. Se tiver uma tag IGNORADA no meio (content_blocks,
-        // first_paid_plan_price...), emitBranchRows quebra em linhas separadas antes/depois dela
+        // sentido na gramática do idioma dela. Se tiver uma tag IGNORADA no meio (content_blocks...),
+        // emitBranchRows quebra em linhas separadas antes/depois dela
         // em vez de deixar um buraco no meio de uma linha só.
         emitBranchRows(tokens, res);
       }
@@ -6982,7 +6985,10 @@ function renderCommentCard(c, all, isReply) {
 function formatCommentText(text) {
   const esc = (text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const members = getProjectMembersWithNames();
-  return esc.replace(/@([A-Za-z\u00C0-\u00FF0-9_]+)/g, (match, name) => {
+  // Inclui h\u00EDfen e ap\u00F3strofo (reto e curly) \u2014 nomes como "Anne-Marie" ou "O'Brien" antes
+  // paravam de casar bem no primeiro caractere especial (@Anne, sem o resto), ent\u00E3o nunca
+  // batiam com nenhum membro e ficavam sem destaque nem notifica\u00E7\u00E3o, silenciosamente.
+  return esc.replace(/@([A-Za-z\u00C0-\u00FF0-9_'\u2019-]+)/g, (match, name) => {
     const found = members.find(m => m.firstName.toLowerCase() === name.toLowerCase());
     return found ? `<span class="mention" title="${found.email}">@${found.firstName}</span>` : match;
   });
@@ -7024,7 +7030,9 @@ function getProjectMembersWithNames() {
 
 function extractMentions(text) {
   const members = getProjectMembersWithNames();
-  const found = [...text.matchAll(/@([A-Za-z\u00C0-\u00FF0-9_]+)/g)].map(m => m[1].toLowerCase());
+  // Mesma classe de caractere de formatCommentText (h\u00EDfen + ap\u00F3strofo reto/curly) \u2014 sem
+  // isso, @Anne-Marie ou @O'Brien nunca disparavam a notifica\u00E7\u00E3o de men\u00E7\u00E3o.
+  const found = [...text.matchAll(/@([A-Za-z\u00C0-\u00FF0-9_'\u2019-]+)/g)].map(m => m[1].toLowerCase());
   return [...new Set(members.filter(m => found.includes(m.firstName.toLowerCase())).map(m => m.email))];
 }
 
@@ -7113,7 +7121,10 @@ let _mentionTextarea = null; // qual textarea (comentário novo ou resposta) est
 function handleMentionInput(e) {
   const ta = e.target;
   const before = ta.value.slice(0, ta.selectionStart);
-  const match = before.match(/@([A-Za-zÀ-ú0-9_]*)$/);
+  // Mesma classe de caractere usada em formatCommentText/extractMentions (hífen + apóstrofo
+  // reto/curly), pra reconhecer "Anne-Marie"/"O'Brien" ENQUANTO a pessoa ainda tá digitando,
+  // não só depois de já ter escolhido no dropdown.
+  const match = before.match(/@([A-Za-zÀ-ÿ0-9_'’-]*)$/);
   if(!match) { closeMentionDropdown(); return; }
 
   _mentionTextarea = ta;
@@ -7172,7 +7183,10 @@ function insertMention(name) {
   const caret = ta.selectionStart;
   const before = ta.value.slice(0, caret);
   const after = ta.value.slice(caret);
-  const newBefore = before.replace(/@([A-Za-zÀ-ú0-9_]*)$/, `@${name} `);
+  // Mesma classe de caractere das outras 3 ocorrências — precisa reconhecer o fragmento
+  // parcial (ex: "@Anne-" antes de completar "Marie") pra substituir certo, não deixar o
+  // "@Anne-" original duplicado do lado do nome escolhido no dropdown.
+  const newBefore = before.replace(/@([A-Za-zÀ-ÿ0-9_'’-]*)$/, `@${name} `);
   ta.value = newBefore + after;
   ta.focus();
   ta.setSelectionRange(newBefore.length, newBefore.length);
@@ -7687,8 +7701,11 @@ function replaceLiquidPlaceholders(html){
   // <span data-tid> do Pass A/B) — sem pular essas tags na checagem, "apps:" e "XXX"
   // pareciam não-adjacentes pro regex mesmo estando visualmente coladas na tela. O grupo
   // do meio (qualquer sequência de tags) é preservado como está; só o espaço entra
-  // logo antes/depois do placeholder em si.
-  html = html.replace(/([a-zA-Z0-9:,;])((?:<[^>]*>)*)(XXX|\{[a-zA-Z0-9_]+\}|Partner \d+)/g, '$1$2 $3');
+  // logo antes/depois do placeholder em si. Inclui "}" no gatilho também — dois
+  // placeholders colados um no outro (ex: "{first_paid_plan_price}{currency}", comum
+  // quando o preço aparece direto colado no content_block de moeda) precisam do mesmo
+  // espaço visual entre eles.
+  html = html.replace(/([a-zA-Z0-9:,;}])((?:<[^>]*>)*)(XXX|\{[a-zA-Z0-9_]+\}|Partner \d+)/g, '$1$2 $3');
   // Do lado de DEPOIS só letra/dígito — pontuação (,;:.) colada logo após o placeholder é
   // tipograficamente normal (ex: "XXX," ou "XXX:"), não precisa de espaço ANTES dela.
   html = html.replace(/(XXX|\{[a-zA-Z0-9_]+\}|Partner \d+)((?:<[^>]*>)*)([a-zA-Z0-9])/g, '$1 $2$3');
@@ -8064,13 +8081,45 @@ function isInsideSkippedTag(before) {
   const styleCloses = (before.match(/<\/style>/gi)||[]).length;
   const scriptOpens = (before.match(/<script[\s>]/gi)||[]).length;
   const scriptCloses = (before.match(/<\/script>/gi)||[]).length;
-  return styleOpens > styleCloses || scriptOpens > scriptCloses;
+  // O comentário condicional de Outlook (o bloco que só ele lê) esconde o conteúdo de todo
+  // mundo EXCETO o Outlook real — texto ali dentro nunca aparece pra quem de fato lê o
+  // e-mail. A variante "downlevel-revealed" (negação do mso) é o oposto: visível pra todo
+  // mundo, só o Outlook não vê — e não conta como "escondido" aqui, mesma distinção já
+  // usada em extractStr(). Sem isso, a busca posicional do buildTaggedHtml() podia
+  // tagueiar a cópia ERRADA de um texto que existe duplicado (ex: um botão com fallback
+  // VML só-Outlook + a versão HTML/CSS real, ambos com o MESMO texto visível) — a tag ia
+  // parar dentro do bloco que ninguém nunca vê, e a tradução nunca aparecia pra ninguém,
+  // nem no preview (o elemento fica dentro de um comentário HTML de verdade, então nem o
+  // navegador cria um nó real pra ele).
+  // Construído via concatenação (não como regex literal direto) pelo mesmo motivo do
+  // "<scr"+"ipt>" usado no resto do arquivo: escrever a sequência "menor-que + exclamação
+  // + traço + traço" de uma vez, dentro de uma tag <script> real, engana o parser de HTML
+  // do navegador (que não sabe o que é um comentário/regex de JS) e o deixa "preso" num
+  // modo de comentário HTML pelo resto do arquivo — foi exatamente esse bug que apareceu
+  // aqui na primeira tentativa desta função.
+  //
+  // Varredura SEQUENCIAL (não uma contagem agregada de "quantos abrem" menos "quantos
+  // fecham") — um e-mail real costuma ter VÁRIOS blocos <!--[if mso]>/<!--[if !mso]>
+  // intercalados (ex: cada botão se se-if/elsif/else duplicado em VML-só-Outlook + HTML
+  // real), e só contar totais no fim confunde qual abertura pertence a qual fechamento.
+  // Processa os marcadores NA ORDEM em que aparecem, com um contador de profundidade real
+  // — mesma lógica, passo a passo, que o extractStr() já usa nos tokens.
+  const msoMarkerRe = new RegExp('<!' + '--\\[if[^>]*>|<!\\[endif\\]', 'gi');
+  let msoHiddenDepth = 0, mm;
+  msoMarkerRe.lastIndex = 0;
+  while((mm = msoMarkerRe.exec(before))){
+    const tok = mm[0];
+    if(/^<!\[endif\]/i.test(tok)){ msoHiddenDepth = Math.max(0, msoHiddenDepth-1); continue; }
+    if(/!mso\]>$/i.test(tok)) continue; // downlevel-revealed — visível, não conta como oculto
+    msoHiddenDepth++;
+  }
+  return styleOpens > styleCloses || scriptOpens > scriptCloses || msoHiddenDepth > 0;
 }
 
 // CSS legitimamente produz "%}" por coincidência (ex: "width:100%}" — um valor percentual bem
 // na frente do fechamento de uma regra), o que bagunça a contagem de "{% ... %}" ainda aberto
-// usada pra achar onde uma linha de verdade deve ser tagueada. Remove os blocos <style>/
-// <script> JÁ FECHADOS antes de contar — assim CSS nunca conta como abertura/fechamento de
+// usada pra achar onde uma linha de verdade deve ser tagueada. Remove os blocos de estilo/
+// script JÁ FECHADOS antes de contar — assim CSS nunca conta como abertura/fechamento de
 // tag Liquid.
 function stripClosedSkippedBlocks(text) {
   return text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
@@ -8888,6 +8937,11 @@ function renderApprovalGrid() {
           <span class="av-frame-lang">${toBrazeLang(lang)}</span>
           ${isOrig ? '<span class="av-frame-origin-badge">origin</span>' : ''}
           <span class="av-frame-count" style="display:none;">0</span>
+          <span class="av-cb-toggle" title="Só teste de visualização — não afeta o HTML/CSV">
+            <button class="av-cb-btn ${(!S.condBranch||S.condBranch==='both')?'active':''}" onclick="event.stopPropagation();setApprovalCondBranch('both')">Both</button>
+            <button class="av-cb-btn ${S.condBranch==='if'?'active':''}" onclick="event.stopPropagation();setApprovalCondBranch('if')">If</button>
+            <button class="av-cb-btn ${S.condBranch==='else'?'active':''}" onclick="event.stopPropagation();setApprovalCondBranch('else')">Else</button>
+          </span>
           <span class="av-frame-approve-slot" id="avApproveSlot-${cssSafeLang(lang)}"></span>
         </div>
         <div class="av-frame-viewport${(_campaignPushPreview || _campaignInappPreview) ? ' av-frame-viewport-bare' : ''}" id="avVp-${cssSafeLang(lang)}" style="width:${frameW}px;"></div>
@@ -8896,6 +8950,21 @@ function renderApprovalGrid() {
   }).join('');
   langs.forEach(lang => { loadApprovalFrame(lang); renderFrameApproveSlot(lang); });
   avFitToFrames();
+}
+
+// Toggle SÓ de teste/visualização (mesmo S.condBranch do preview principal — ver
+// resolveConditionalBranch) — mostrado em CIMA de cada e-mail na Approval View, mas é um
+// estado ÚNICO compartilhado entre todos os idiomas (clicar em qualquer frame atualiza
+// todos), pra comparar o mesmo branch lado a lado em vários idiomas de uma vez. Nunca
+// muda o HTML/CSV real, só recarrega os iframes de preview já abertos.
+function setApprovalCondBranch(mode) {
+  S.condBranch = mode;
+  document.querySelectorAll('.av-cb-btn').forEach(b => {
+    const isActive = b.getAttribute('onclick').includes(`'${mode}'`);
+    b.classList.toggle('active', isActive);
+  });
+  const { langs } = approvalLangs();
+  langs.forEach(lang => loadApprovalFrame(lang));
 }
 
 // Botão de aprovação POR IDIOMA, acima de cada frame — aprovar/desaprovar um idioma não afeta
