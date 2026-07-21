@@ -1263,7 +1263,7 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
       <p class="sub" id="deleteConfirmMsg" style="margin-bottom:0;">Are you sure you want to delete <strong id="deleteProjName"></strong>? This action cannot be undone.</p>
       <div style="display:flex;gap:10px;margin-top:22px;">
         <button class="btn-back" style="flex:1;" onclick="closeDeleteConfirmModal()">Cancel</button>
-        <button class="btn-next btn-destructive" style="flex:1;margin-top:0;" onclick="confirmGenericDelete()">Delete</button>
+        <button id="deleteConfirmBtn" class="btn-next btn-destructive" style="flex:1;margin-top:0;" onclick="confirmGenericDelete()">Delete</button>
       </div>
     </div>
   </div>
@@ -2140,6 +2140,37 @@ function _saveDeletedProjectIdsLocal() {
   try { localStorage.setItem(DELETED_PROJ_KEY, JSON.stringify(_deletedProjectIdsMap)); } catch(e){}
 }
 
+// Ids pros quais ESTA aba/navegador já mandou um DELETE de verdade pro Supabase — sem
+// isso, o loop de limpeza em ghMergeAndPushProjects reenviava um DELETE pra TODO o
+// histórico de tombstones (até 90 dias, de qualquer projeto deletado por qualquer
+// pessoa) em CADA save, um de cada vez — deletar um projeto ficava mais lento que o
+// anterior, e o PRÓXIMO delete que a pessoa tentasse ficava preso esperando essa fila
+// inteira terminar (bug real: "deletar um projeto, depois tentar deletar outro trava").
+// Isso só marca "já mandei uma vez" — outro navegador que nunca mandou ainda manda a
+// dele uma vez (a real fonte de verdade continua sendo o banco); é só pra não repetir
+// pra sempre o mesmo trabalho já feito.
+const ISSUED_PROJ_DELETE_KEY = 'mlt_issued_project_deletes_v1';
+function _loadIssuedProjectDeletes() {
+  try { return new Set(JSON.parse(localStorage.getItem(ISSUED_PROJ_DELETE_KEY) || '[]')); }
+  catch(e) { return new Set(); }
+}
+let _issuedProjectDeletes = _loadIssuedProjectDeletes();
+function _saveIssuedProjectDeletesLocal() {
+  try { localStorage.setItem(ISSUED_PROJ_DELETE_KEY, JSON.stringify([..._issuedProjectDeletes])); } catch(e){}
+}
+
+// Qualquer chamada de rede (Supabase incluído) pode ficar pendurada pra sempre numa
+// conexão que caiu, sem nunca dar erro nem sucesso. Sem um teto de tempo, isso travava
+// _pendingProjectsPush pra sempre — e QUALQUER save/delete futuro espera essa promise
+// terminar antes de continuar (ver ghPullProjects), então uma única rede engasgada
+// travava o app inteiro até um refresh manual.
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout (${ms}ms) esperando: ${label}`)), ms))
+  ]);
+}
+
 // Marca localmente NA HORA (feedback instantâneo, cobre até dispositivos offline) e
 // também sobe pro Supabase em segundo plano — se a tabela ainda não existir no projeto
 // (ver aviso no console), o tombstone continua funcionando local/por navegador, só não
@@ -2204,15 +2235,22 @@ async function ghMergeAndPushProjects(localProjects) {
       // salvando com o cache local de uma aba que nunca soube de nenhum delete). Sem
       // isso, um projeto deletado por outra pessoa podia ser upsertado de volta no
       // banco compartilhado só porque ESTA aba ainda tinha ele no cache local.
-      await pullDeletedProjectIds();
+      await withTimeout(pullDeletedProjectIds(), 8000, 'pullDeletedProjectIds');
       const rows = localProjects.filter(p => !isProjectRecentlyDeleted(p.id)).map(p => ({ id: p.id, payload: p }));
       if(rows.length) {
-        const { error } = await sb.from('projects').upsert(rows);
+        const { error } = await withTimeout(sb.from('projects').upsert(rows), 8000, 'upsert projects');
         if(error) throw error;
       }
+      // Só manda o DELETE pra quem esta aba ainda não mandou — sem isso, cada save
+      // reprocessava TODO o histórico de tombstones (até 90 dias, de qualquer projeto
+      // deletado por qualquer pessoa) de novo, um por um, deixando cada delete mais
+      // lento que o anterior.
       for(const delId in _deletedProjectIdsMap) {
-        await sb.from('projects').delete().eq('id', delId);
+        if(_issuedProjectDeletes.has(delId)) continue;
+        await withTimeout(sb.from('projects').delete().eq('id', delId), 8000, `delete project ${delId}`);
+        _issuedProjectDeletes.add(delId);
       }
+      _saveIssuedProjectDeletesLocal();
       setSyncDot('on');
     } catch(e) {
       console.warn('Supabase sync (push projects) error:', e);
@@ -2232,13 +2270,13 @@ async function ghPullProjects() {
   // Se tiver um push recente ainda em voo, espera ele terminar primeiro — senão
   // este pull pode buscar a versão ANTIGA do servidor e apagar o salvamento que
   // acabou de acontecer localmente.
-  if(_pendingProjectsPush) { try { await _pendingProjectsPush; } catch(e) {} }
+  if(_pendingProjectsPush) { try { await withTimeout(_pendingProjectsPush, 8000, 'pending projects push'); } catch(e) {} }
   // Traz os tombstones de qualquer outro dispositivo/navegador ANTES do merge abaixo —
   // sem isso, esta aba só sabia dos projetos que ELA MESMA marcou como deletados,
   // e podia ressuscitar um projeto deletado por outra pessoa/aba.
-  await pullDeletedProjectIds();
+  await withTimeout(pullDeletedProjectIds(), 8000, 'pullDeletedProjectIds');
   try {
-    const { data, error } = await sb.from('projects').select('id,payload');
+    const { data, error } = await withTimeout(sb.from('projects').select('id,payload'), 8000, 'select projects');
     if(error) throw error;
     const projects = (data || []).map(r => r.payload).filter(Boolean);
     // Faz o MESMO merge por projeto (updatedAt) que projSaveAll usa — sem isso, um pull
@@ -2768,10 +2806,14 @@ function mergeProjectsForSave(projects) {
   return merged;
 }
 
+// Devolve a promise do push em segundo plano — a maioria dos chamadores (autosave
+// enquanto digita, etc.) ignora esse retorno de propósito, pra não travar a digitação
+// esperando rede. Quem PRECISA saber que o save/delete realmente terminou (ex: o fluxo
+// de deletar projeto, pra só fechar o modal e destravar o botão depois) pode dar await.
 function projSaveAll(projects) {
   const merged = mergeProjectsForSave(projects);
   projSaveAllLocal(merged); // salva local imediatamente — não trava esperando o GitHub
-  ghMergeAndPushProjects(merged); // sincroniza com o GitHub em segundo plano, com merge
+  return ghMergeAndPushProjects(merged); // sincroniza com o GitHub em segundo plano, com merge
 }
 
 function projIsLocked(p) {
@@ -3143,13 +3185,16 @@ function deleteCampaign(id) {
 }
 
 async function confirmCampaignDelete() {
-  if(!_pendingDeleteId) return;
-  if(ghConfigured()) await ghPullProjects();
-  await markProjectDeleted(_pendingDeleteId);
-  await deleteNotifsForProject(_pendingDeleteId);
-  const projects = projGetAll().filter(p => p.id !== _pendingDeleteId);
-  projSaveAll(projects);
-  if(currentProjectId === _pendingDeleteId) currentProjectId = null;
+  // Ver comentário equivalente em confirmProjDelete — captura local pra sobreviver
+  // a um "Cancel" no meio da cadeia de awaits.
+  const id = _pendingDeleteId;
+  if(!id) return;
+  if(ghConfigured()) await withTimeout(ghPullProjects(), 8000, 'ghPullProjects');
+  await withTimeout(markProjectDeleted(id), 8000, 'markProjectDeleted');
+  await withTimeout(deleteNotifsForProject(id), 8000, 'deleteNotifsForProject');
+  const projects = projGetAll().filter(p => p.id !== id);
+  await withTimeout(projSaveAll(projects), 8000, 'projSaveAll');
+  if(currentProjectId === id) currentProjectId = null;
   closeDeleteConfirmModal();
   renderDashboard();
 }
@@ -4554,21 +4599,40 @@ function closeDeleteConfirmModal() {
 // _pendingDeleteKind. Usar um modal próprio (em vez de window.confirm()) pros deletes de
 // campanha/item de conteúdo também, já que window.confirm() pode ficar bloqueado ou não
 // aparecer em alguns navegadores/contextos de embed, fazendo o delete parecer quebrado.
+// Trava o botão (spinner + disabled) enquanto a cadeia inteira de awaits roda — sem isso,
+// nada avisava que um delete ainda estava em andamento, e deletar um projeto logo depois
+// de outro parecia travar (o segundo clique não fazia nada visível até o primeiro
+// terminar de verdade em segundo plano).
 async function confirmGenericDelete() {
-  if(_pendingDeleteKind === 'campaign') return confirmCampaignDelete();
-  if(_pendingDeleteKind === 'contentItem') return confirmContentItemDelete();
-  return confirmProjDelete();
+  const btn = document.getElementById('deleteConfirmBtn');
+  const originalHtml = btn ? btn.innerHTML : null;
+  if(btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Deleting…'; }
+  try {
+    if(_pendingDeleteKind === 'campaign') { await confirmCampaignDelete(); return; }
+    if(_pendingDeleteKind === 'contentItem') { await confirmContentItemDelete(); return; }
+    await confirmProjDelete();
+  } catch(e) {
+    console.warn('Delete failed:', e);
+    alert('Something went wrong deleting this. Please try again.');
+  } finally {
+    if(btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+  }
 }
 
 async function confirmProjDelete() {
-  if(!_pendingDeleteId) return;
-  if(ghConfigured()) await ghPullProjects(); // ver comentário em confirmAssignFolder
-  await markProjectDeleted(_pendingDeleteId);
-  await deleteNotifsForProject(_pendingDeleteId);
+  // Captura o id ANTES de qualquer await — _pendingDeleteId é uma variável global e
+  // "Cancel" (closeDeleteConfirmModal) zera ela pra null; sem essa cópia local, um
+  // cancelamento bem no meio da cadeia de awaits fazia o filtro de baixo virar
+  // "p.id !== null" (bate com tudo), ressuscitando o projeto que estava sendo apagado.
+  const id = _pendingDeleteId;
+  if(!id) return;
+  if(ghConfigured()) await withTimeout(ghPullProjects(), 8000, 'ghPullProjects'); // ver comentário em confirmAssignFolder
+  await withTimeout(markProjectDeleted(id), 8000, 'markProjectDeleted');
+  await withTimeout(deleteNotifsForProject(id), 8000, 'deleteNotifsForProject');
   let projects = projGetAll();
-  projects = projects.filter(p => p.id !== _pendingDeleteId);
-  projSaveAll(projects);
-  if(currentProjectId === _pendingDeleteId) currentProjectId = null;
+  projects = projects.filter(p => p.id !== id);
+  await withTimeout(projSaveAll(projects), 8000, 'projSaveAll');
+  if(currentProjectId === id) currentProjectId = null;
   closeDeleteConfirmModal();
   renderDashboard();
 }
@@ -5734,13 +5798,21 @@ function isRecognizedMergeTag(val) {
 // texto — exatamente como aparecem no HTML, sem virar placeholder nem valor de "default".
 // Isso é o que a pessoa vê e edita no CSV/grade; o preview visual final é que troca essas
 // tags por algo legível (via replaceLiquidPlaceholders), então não precisa fazer isso aqui.
+// SEM .trim() no final de propósito — o resultado vira row.text, que csvSourceText()
+// usa como a coluna de origem do CSV exportado. row.src (o texto CRU, com o mesmo
+// espaço nas pontas que existe de verdade no HTML) é o que buildTaggedHtml() embute
+// entre {%translation id%}...{%endtranslation%}. Se aqui desse um trim() e lá não,
+// a Braze via o texto da tag no HTML diferente do texto na coluna de origem do CSV
+// (só por espaço a mais/a menos) e recusava o upload com "CSV is different from the
+// HTML" — bug real reportado por quem usa a ferramenta. Espaço nas pontas precisa
+// sobreviver aqui igual sobrevive em row.src.
 function mergeLiquidInline(str) {
   return splitLiquid(str).map(tk => {
     if(tk.type !== 'liquid') return tk.val;
     if(/^\{%/.test(tk.val.trim())) return '';
     if(!isRecognizedMergeTag(tk.val)) return '';
     return tk.val;
-  }).join('').replace(/\s{2,}/g, ' ').trim();
+  }).join('').replace(/\s{2,}/g, ' ');
 }
 
 // Texto de origem que vai pro CSV exportado (coluna que a pessoa vê e traduz). row.src
@@ -5799,7 +5871,10 @@ function emitBranchRows(branchTokens, res) {
     if(!seg.length) return;
     const segSrc = seg.map(tk=>tk.val).join('');
     const mergedText = mergeLiquidInline(segSrc);
-    if(mergedText.length >= 2) res.push({text:mergedText, src:segSrc, display:toLiquidPlaceholder(segSrc), isStyle:false});
+    // Checa o tamanho do texto SEM espaço nas pontas (mergeLiquidInline não corta mais isso
+    // de propósito, ver comentário lá) — senão um segmento que é só espaço em branco vira
+    // uma linha traduzível vazia.
+    if(mergedText.trim().length >= 2) res.push({text:mergedText, src:segSrc, display:toLiquidPlaceholder(segSrc), isStyle:false});
     seg = [];
   };
   for(const tk of branchTokens){
@@ -7600,6 +7675,24 @@ function replaceLiquidPlaceholders(html){
   // que sobrou sem regra específica — ex: {{context.last_free_plan_name}}.
   html=html.replace(/\{\{\s*context\.([a-zA-Z0-9_]+)\s*\}\}/g, '{$1}');
   html=html.replace(/\{\{\s*custom_attribute\.([a-zA-Z0-9_]+)\s*\}\}/g, '{$1}');
+
+  // SÓ VISUAL, pra quem está aprovando — nunca muda o HTML/CSV reais (essa função só
+  // roda no preview, depois das duas passadas de Pass A/B). Às vezes o template original
+  // já vem sem espaço entre um texto e a tag Liquid (ex: "apps:{{content_blocks...}}"),
+  // porque na Braze de verdade aquilo vira um número colado ali mesmo (ex: "apps:47").
+  // Isso é fiel ao HTML real, mas GRUDADO com o placeholder amigável (ex: "apps:XXX")
+  // fica confuso pra revisar visualmente — insere um espaço só aqui, só pra leitura.
+  // O texto visível ("apps:") e o placeholder (ex: "XXX") quase sempre têm uma fronteira
+  // de tag HTML entre eles no string final (ex: "apps:</span></strong>XXX", por causa do
+  // <span data-tid> do Pass A/B) — sem pular essas tags na checagem, "apps:" e "XXX"
+  // pareciam não-adjacentes pro regex mesmo estando visualmente coladas na tela. O grupo
+  // do meio (qualquer sequência de tags) é preservado como está; só o espaço entra
+  // logo antes/depois do placeholder em si.
+  html = html.replace(/([a-zA-Z0-9:,;])((?:<[^>]*>)*)(XXX|\{[a-zA-Z0-9_]+\}|Partner \d+)/g, '$1$2 $3');
+  // Do lado de DEPOIS só letra/dígito — pontuação (,;:.) colada logo após o placeholder é
+  // tipograficamente normal (ex: "XXX," ou "XXX:"), não precisa de espaço ANTES dela.
+  html = html.replace(/(XXX|\{[a-zA-Z0-9_]+\}|Partner \d+)((?:<[^>]*>)*)([a-zA-Z0-9])/g, '$1 $2$3');
+
   return html;
 }
 
@@ -7716,14 +7809,19 @@ function buildPreviewHtml(lang){
       const placeholder = `__TID_${row.id}__`;
       if(!html.includes(placeholder)) return;
       // Para linhas isLiquidFull, o src é a expressão Liquid inteira — no preview, mostramos
-      // o texto humano legível (display = fallback do default), não a expressão crua.
+      // o texto humano legível (row.text = fallback do default), não a expressão crua.
       // Fallback (sem tradução, ou vendo o idioma original) precisa ser o MESMO texto que
-      // aparece no CSV/grid (row.text — com o "default" já preenchido, ex: "there"), não
-      // row.display (que é só o placeholder tipo "{first_name}", usado pro rótulo compacto
-      // do grid) — senão o preview mostra um texto diferente do que a pessoa vê no CSV.
+      // aparece no CSV/grid (row.text — com o "default" já preenchido, ex: "there") ou,
+      // na falta dele, row.src ORIGINAL — NUNCA row.display. row.display passa por
+      // toLiquidPlaceholder(), que dá um .trim() de propósito (é só o rótulo compacto do
+      // grid) — sem essa exceção aqui, uma linha cujo espaço de separação com o elemento
+      // vizinho vive só no início/fim do PRÓPRIO texto (ex: um merge tag colado sem espaço
+      // antes, tipo "apps:{{tag}} options...", onde o " options" começa com espaço) perdia
+      // esse espaço no preview — "apps:" e o texto seguinte apareciam grudados, mesmo o
+      // HTML de origem estando certo.
       const displayText = curlifyApostrophes((!isOrig && row.translations[lang])
         ? row.translations[lang]
-        : (row.text || row.display || row.src));
+        : (row.text || row.src));
       html = html.replace(placeholder, `<span data-tid="${row.id}">${displayText}</span>`);
     }
   });
