@@ -370,6 +370,8 @@ td.del button:hover{color:#b52a2a;background:#fdeaea;}
 .sp-wrap{display:flex;gap:2px;background:rgba(0,0,0,.07);border-radius:9px;padding:3px;}
 .sp{height:25px;padding:0 10px;border-radius:7px;border:none;background:transparent;font-size:11px;cursor:pointer;color:rgba(0,0,0,.5);font-family:-apple-system,sans-serif;font-weight:600;transition:all .12s;display:flex;align-items:center;gap:4px;}
 .sp.active{background:#fff;color:rgba(0,0,0,.85);box-shadow:0 1px 3px rgba(0,0,0,.16),0 0 0 .5px rgba(0,0,0,.04);}
+.cb-btn{height:25px;padding:0 10px;border-radius:7px;border:none;background:transparent;font-size:11px;cursor:pointer;color:rgba(0,0,0,.5);font-family:-apple-system,sans-serif;font-weight:600;transition:all .12s;}
+.cb-btn.active{background:#fff;color:rgba(0,0,0,.85);box-shadow:0 1px 3px rgba(0,0,0,.16),0 0 0 .5px rgba(0,0,0,.04);}
 
 /* Viewer notification bar */
 #vnotif {
@@ -1665,6 +1667,11 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
             Mobile
           </button>
         </div>
+        <div class="sp-wrap" id="condBranchWrap" title="Só teste de visualização — não afeta o HTML tageado nem o CSV">
+          <button class="cb-btn active" onclick="setCondBranch('both',this)">Both</button>
+          <button class="cb-btn" onclick="setCondBranch('if',this)">If</button>
+          <button class="cb-btn" onclick="setCondBranch('else',this)">Else</button>
+        </div>
       </div>
       <div class="vw-langs">
         <span class="vw-langs-label">Language</span>
@@ -2104,8 +2111,74 @@ function showSyncWarning(msg) {
   _syncToastTimer = setTimeout(() => toast.classList.remove('show'), 5000);
 }
 
-// Tombstones — projetos excluídos nesta sessão, pra também apagá-los no banco.
-const _recentlyDeletedProjectIds = new Set();
+// Tombstones — persistidos no Supabase (tabela deleted_project_ids), com uma cópia em
+// cache no localStorage só pra leitura instantânea antes do primeiro pull. Bug real
+// encontrado: uma versão anterior guardava isso só em localStorage (ou pior, só em
+// memória) — cada navegador/dispositivo tem seu PRÓPRIO localStorage, então a aba de
+// UMA pessoa marcando um projeto como deletado nunca chegava na aba de OUTRA pessoa (ou
+// na mesma aba depois de limpar cache/trocar de máquina). Essa outra aba, ao sincronizar,
+// via "projeto no meu cache local que não veio do banco" e achava que era "criado por
+// outra aba que ainda não sincronizou" — revivendo o projeto (e, no próximo save, de
+// volta pro banco). Guardando no Supabase, QUALQUER navegador que fizer pull vê os
+// mesmos tombstones. Expira sozinho depois de um tempo generoso — só existe pra cobrir
+// a janela até todo mundo sincronizar; manter para sempre só ocuparia espaço à toa.
+const DELETED_PROJ_KEY = 'mlt_deleted_project_ids_v1';
+const DELETED_PROJ_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 dias
+
+function _loadDeletedProjectIds() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(DELETED_PROJ_KEY) || '{}');
+    const now = Date.now();
+    const pruned = {};
+    for(const id in raw) { if(now - raw[id] < DELETED_PROJ_TTL_MS) pruned[id] = raw[id]; }
+    return pruned;
+  } catch(e) { return {}; }
+}
+let _deletedProjectIdsMap = _loadDeletedProjectIds();
+
+function _saveDeletedProjectIdsLocal() {
+  try { localStorage.setItem(DELETED_PROJ_KEY, JSON.stringify(_deletedProjectIdsMap)); } catch(e){}
+}
+
+// Marca localmente NA HORA (feedback instantâneo, cobre até dispositivos offline) e
+// também sobe pro Supabase em segundo plano — se a tabela ainda não existir no projeto
+// (ver aviso no console), o tombstone continua funcionando local/por navegador, só não
+// se propaga entre dispositivos até a tabela ser criada.
+async function markProjectDeleted(id) {
+  _deletedProjectIdsMap[id] = Date.now();
+  _saveDeletedProjectIdsLocal();
+  const sb = sbClient();
+  if(!sb) return;
+  try {
+    const { error } = await sb.from('deleted_project_ids').upsert({ id, deleted_at: new Date().toISOString() });
+    if(error) throw error;
+  } catch(e) {
+    console.warn('Supabase sync (push tombstone) error — rode a migration de deleted_project_ids:', e);
+  }
+}
+
+// Busca os tombstones de QUALQUER dispositivo/navegador que já tenha deletado algo,
+// mesclando com os locais (a leitura remota é a fonte da verdade quando disponível).
+async function pullDeletedProjectIds() {
+  const sb = sbClient();
+  if(!sb) return;
+  try {
+    const { data, error } = await sb.from('deleted_project_ids').select('id,deleted_at');
+    if(error) throw error;
+    const now = Date.now();
+    (data || []).forEach(row => {
+      const ts = new Date(row.deleted_at).getTime();
+      if(now - ts < DELETED_PROJ_TTL_MS) _deletedProjectIdsMap[row.id] = ts;
+    });
+    _saveDeletedProjectIdsLocal();
+  } catch(e) {
+    console.warn('Supabase sync (pull tombstones) error — rode a migration de deleted_project_ids:', e);
+  }
+}
+
+function isProjectRecentlyDeleted(id) {
+  return Object.prototype.hasOwnProperty.call(_deletedProjectIdsMap, id);
+}
 
 // Salva localmente na hora e sobe pro Supabase em segundo plano (não trava a UI).
 // Como cada projeto é uma LINHA independente, não precisa do merge de arquivo único
@@ -2125,12 +2198,19 @@ async function ghMergeAndPushProjects(localProjects) {
   if(!sb) return;
   const pushPromise = (async () => {
     try {
-      const rows = localProjects.map(p => ({ id: p.id, payload: p }));
+      // Busca os tombstones mais recentes do banco ANTES de decidir o que upsertar —
+      // não dá pra confiar só no que já está em memória aqui, porque quem chamou
+      // ghMergeAndPushProjects pode nunca ter dado pull antes (ex: projReleaseMine()
+      // salvando com o cache local de uma aba que nunca soube de nenhum delete). Sem
+      // isso, um projeto deletado por outra pessoa podia ser upsertado de volta no
+      // banco compartilhado só porque ESTA aba ainda tinha ele no cache local.
+      await pullDeletedProjectIds();
+      const rows = localProjects.filter(p => !isProjectRecentlyDeleted(p.id)).map(p => ({ id: p.id, payload: p }));
       if(rows.length) {
         const { error } = await sb.from('projects').upsert(rows);
         if(error) throw error;
       }
-      for(const delId of _recentlyDeletedProjectIds) {
+      for(const delId in _deletedProjectIdsMap) {
         await sb.from('projects').delete().eq('id', delId);
       }
       setSyncDot('on');
@@ -2153,6 +2233,10 @@ async function ghPullProjects() {
   // este pull pode buscar a versão ANTIGA do servidor e apagar o salvamento que
   // acabou de acontecer localmente.
   if(_pendingProjectsPush) { try { await _pendingProjectsPush; } catch(e) {} }
+  // Traz os tombstones de qualquer outro dispositivo/navegador ANTES do merge abaixo —
+  // sem isso, esta aba só sabia dos projetos que ELA MESMA marcou como deletados,
+  // e podia ressuscitar um projeto deletado por outra pessoa/aba.
+  await pullDeletedProjectIds();
   try {
     const { data, error } = await sb.from('projects').select('id,payload');
     if(error) throw error;
@@ -2234,17 +2318,81 @@ function notifSaveAll(notifs) {
   sbPushNotifs(notifs); // sincroniza com o Supabase em segundo plano
 }
 
+// Chamado ao deletar um projeto/campanha — notificações normalmente NUNCA são deletadas
+// (ver comentário acima), mas uma que referencia um projeto que deixou de existir vira
+// lixo permanente no sino: "fulano mencionou você num comentário em X" fica pra sempre,
+// e clicar nela falha em silêncio (openNotifTarget não acha o projeto e só dá return).
+// Só limpa quem aponta pro id que acabou de ser apagado — todo o resto continua intacto.
+async function deleteNotifsForProject(projectId) {
+  const all = notifGetAll();
+  const orphaned = all.filter(n => n.meta && n.meta.projectId === projectId);
+  if(!orphaned.length) return;
+  for(const n of orphaned) await sbDeleteNotif(n.id); // marca tombstone + deleta remoto
+  const remaining = all.filter(n => !(n.meta && n.meta.projectId === projectId));
+  notifSaveAll(remaining);
+  renderNotifBell();
+  if(isNotifPanelOpen()) renderNotifPanel();
+}
+
 // Mesma corrida de projects/users: sem isso, um pull (poll do sino de notificações,
 // outra aba abrindo) que chegue antes do push terminar apagaria uma notificação
 // recém-criada (ex: @menção em um comentário) que ainda não tinha chegado no servidor.
 let _pendingNotifsPush = null;
+
+// Tombstones de notificação deletada — mesmo esquema/motivo dos tombstones de projeto
+// e de usuário acima: sem isso, uma aba com o sino de notificações aberto há um tempo
+// (cache local com uma notificação já marcada como lida/apagada em outro lugar) podia
+// re-upsertar ela de volta no banco compartilhado no próximo push.
+const DELETED_NOTIF_KEY = 'mlt_deleted_notif_ids_v1';
+let _deletedNotifIdsMap = (function(){
+  try {
+    const raw = JSON.parse(localStorage.getItem(DELETED_NOTIF_KEY) || '{}');
+    const now = Date.now();
+    const pruned = {};
+    for(const id in raw) { if(now - raw[id] < DELETED_PROJ_TTL_MS) pruned[id] = raw[id]; }
+    return pruned;
+  } catch(e) { return {}; }
+})();
+function _saveDeletedNotifIdsLocal() {
+  try { localStorage.setItem(DELETED_NOTIF_KEY, JSON.stringify(_deletedNotifIdsMap)); } catch(e){}
+}
+async function markNotifDeleted(id) {
+  _deletedNotifIdsMap[id] = Date.now();
+  _saveDeletedNotifIdsLocal();
+  const sb = sbClient();
+  if(!sb) return;
+  try {
+    const { error } = await sb.from('deleted_notification_ids').upsert({ id, deleted_at: new Date().toISOString() });
+    if(error) throw error;
+  } catch(e) { console.warn('Supabase sync (push tombstone notif) error — rode a migration de deleted_notification_ids:', e); }
+}
+async function pullDeletedNotifIds() {
+  const sb = sbClient();
+  if(!sb) return;
+  try {
+    const { data, error } = await sb.from('deleted_notification_ids').select('id,deleted_at');
+    if(error) throw error;
+    const now = Date.now();
+    (data || []).forEach(row => {
+      const ts = new Date(row.deleted_at).getTime();
+      if(now - ts < DELETED_PROJ_TTL_MS) _deletedNotifIdsMap[row.id] = ts;
+    });
+    _saveDeletedNotifIdsLocal();
+  } catch(e) { console.warn('Supabase sync (pull tombstones notif) error — rode a migration de deleted_notification_ids:', e); }
+}
+function isNotifRecentlyDeleted(id) {
+  return Object.prototype.hasOwnProperty.call(_deletedNotifIdsMap, id);
+}
 
 async function sbPushNotifs(notifs) {
   const sb = sbClient();
   if(!sb) return;
   const pushPromise = (async () => {
     try {
-      const rows = notifs.map(n => ({ id: n.id, payload: n }));
+      // Mesma proteção do push de projects/users: busca os tombstones mais recentes
+      // ANTES de decidir o que upsertar.
+      await pullDeletedNotifIds();
+      const rows = notifs.filter(n => !isNotifRecentlyDeleted(n.id)).map(n => ({ id: n.id, payload: n }));
       if(rows.length) {
         const { error } = await sb.from('notifications').upsert(rows);
         if(error) throw error;
@@ -2259,6 +2407,7 @@ async function sbPushNotifs(notifs) {
 }
 
 async function sbDeleteNotif(id) {
+  await markNotifDeleted(id);
   const sb = sbClient();
   if(!sb) return;
   try { await sb.from('notifications').delete().eq('id', id); }
@@ -2275,12 +2424,64 @@ async function sbDeleteNotif(id) {
 // versão antiga — apagando silenciosamente uma renomeação/troca de setor recém-feita.
 let _pendingUsersPush = null;
 
+// Tombstones de usuário deletado — mesmo esquema e mesmo motivo dos tombstones de
+// projeto (ver DELETED_PROJ_KEY acima): sem isso, uma aba com cache antigo do Members
+// tab (que ainda tem o usuário removido na lista local) podia chamar authSaveUsers()
+// por qualquer outro motivo (ex: editando OUTRO membro) e re-upsertar o usuário já
+// deletado de volta no banco compartilhado.
+const DELETED_USER_KEY = 'mlt_deleted_user_emails_v1';
+let _deletedUserEmailsMap = (function(){
+  try {
+    const raw = JSON.parse(localStorage.getItem(DELETED_USER_KEY) || '{}');
+    const now = Date.now();
+    const pruned = {};
+    for(const email in raw) { if(now - raw[email] < DELETED_PROJ_TTL_MS) pruned[email] = raw[email]; }
+    return pruned;
+  } catch(e) { return {}; }
+})();
+function _saveDeletedUserEmailsLocal() {
+  try { localStorage.setItem(DELETED_USER_KEY, JSON.stringify(_deletedUserEmailsMap)); } catch(e){}
+}
+async function markUserDeleted(email) {
+  email = (email||'').toLowerCase();
+  _deletedUserEmailsMap[email] = Date.now();
+  _saveDeletedUserEmailsLocal();
+  const sb = sbClient();
+  if(!sb) return;
+  try {
+    const { error } = await sb.from('deleted_user_emails').upsert({ email, deleted_at: new Date().toISOString() });
+    if(error) throw error;
+  } catch(e) { console.warn('Supabase sync (push tombstone user) error — rode a migration de deleted_user_emails:', e); }
+}
+async function pullDeletedUserEmails() {
+  const sb = sbClient();
+  if(!sb) return;
+  try {
+    const { data, error } = await sb.from('deleted_user_emails').select('email,deleted_at');
+    if(error) throw error;
+    const now = Date.now();
+    (data || []).forEach(row => {
+      const ts = new Date(row.deleted_at).getTime();
+      if(now - ts < DELETED_PROJ_TTL_MS) _deletedUserEmailsMap[row.email] = ts;
+    });
+    _saveDeletedUserEmailsLocal();
+  } catch(e) { console.warn('Supabase sync (pull tombstones user) error — rode a migration de deleted_user_emails:', e); }
+}
+function isUserRecentlyDeleted(email) {
+  return Object.prototype.hasOwnProperty.call(_deletedUserEmailsMap, (email||'').toLowerCase());
+}
+
 async function sbPushUsers(users) {
   const sb = sbClient();
   if(!sb) return;
   const pushPromise = (async () => {
     try {
-      const rows = users.map(u => ({ email: (u.email||'').toLowerCase(), payload: u }));
+      // Mesma proteção do push de projects: busca os tombstones mais recentes ANTES
+      // de decidir o que upsertar, pra não confiar só no que esta aba já sabia.
+      await pullDeletedUserEmails();
+      const rows = users
+        .filter(u => !isUserRecentlyDeleted(u.email))
+        .map(u => ({ email: (u.email||'').toLowerCase(), payload: u }));
       if(rows.length) {
         const { error } = await sb.from('users').upsert(rows);
         if(error) throw error;
@@ -2295,6 +2496,7 @@ async function sbPushUsers(users) {
 }
 
 async function sbDeleteUser(email) {
+  await markUserDeleted(email);
   const sb = sbClient();
   if(!sb) return;
   try { await sb.from('users').delete().eq('email', (email||'').toLowerCase()); }
@@ -2541,6 +2743,13 @@ function projSaveAllLocal(projects) {
 // projeto, cada um mantém sua versão mais recente de verdade, não a "foto" mais recente da
 // lista toda.
 function mergeProjectsForSave(projects) {
+  // Filtra qualquer id tageado como deletado ANTES de tudo — sem isso, se o array
+  // "projects" (o que está sendo salvo AGORA, vindo de qualquer chamador) já contiver
+  // diretamente um projeto tombstoned (ex: uma aba com cache antigo chamando
+  // projSaveAll() com sua lista velha, que ainda inclui um projeto que foi deletado
+  // por OUTRA pessoa/aba), ele passava batido por esse filtro — só o loop de
+  // "preservar o que não veio" abaixo checava tombstone, não o array de entrada em si.
+  projects = projects.filter(p => !isProjectRecentlyDeleted(p.id));
   const latest = projGetAll();
   const latestById = {};
   latest.forEach(p => { latestById[p.id] = p; });
@@ -2555,7 +2764,7 @@ function mergeProjectsForSave(projects) {
   // (ex: criado por outra aba entre a hora que lemos e a hora que salvamos) — preserva, não
   // deixa sumir. Exceção: projetos deletados recentemente por este mesmo processo não devem
   // ser ressuscitados aqui.
-  latest.forEach(p => { if(!incomingIds.has(p.id) && !_recentlyDeletedProjectIds.has(p.id)) merged.push(p); });
+  latest.forEach(p => { if(!incomingIds.has(p.id) && !isProjectRecentlyDeleted(p.id)) merged.push(p); });
   return merged;
 }
 
@@ -2936,7 +3145,8 @@ function deleteCampaign(id) {
 async function confirmCampaignDelete() {
   if(!_pendingDeleteId) return;
   if(ghConfigured()) await ghPullProjects();
-  _recentlyDeletedProjectIds.add(_pendingDeleteId);
+  await markProjectDeleted(_pendingDeleteId);
+  await deleteNotifsForProject(_pendingDeleteId);
   const projects = projGetAll().filter(p => p.id !== _pendingDeleteId);
   projSaveAll(projects);
   if(currentProjectId === _pendingDeleteId) currentProjectId = null;
@@ -4353,7 +4563,8 @@ async function confirmGenericDelete() {
 async function confirmProjDelete() {
   if(!_pendingDeleteId) return;
   if(ghConfigured()) await ghPullProjects(); // ver comentário em confirmAssignFolder
-  _recentlyDeletedProjectIds.add(_pendingDeleteId);
+  await markProjectDeleted(_pendingDeleteId);
+  await deleteNotifsForProject(_pendingDeleteId);
   let projects = projGetAll();
   projects = projects.filter(p => p.id !== _pendingDeleteId);
   projSaveAll(projects);
@@ -4564,6 +4775,11 @@ const S = {
   htmlAlreadyTagged: false,
   vLang: null,
   vSize: 'full',
+  // Toggle SÓ de teste/visualização (não afeta o HTML tageado nem o CSV exportado) — deixa
+  // escolher manualmente qual branch de um {% if/else %} aparece no preview, já que hoje o
+  // preview não avalia a condição de verdade, só mostra tudo em sequência com uma etiqueta.
+  // 'both' = comportamento atual (mostra os dois lados, com a etiqueta IF/ELSE/ENDIF).
+  condBranch: 'both',
   // Approval — Figma-style pin comments over the per-country preview grid.
   // Each: {id, lang, xPct, yPct, text, author, createdAt, resolvedBy:[]}
   approvalComments: [],
@@ -4775,6 +4991,7 @@ function resetAll() {
   S.csv = { name:'', rows:[], langs:[] };
   S.selImgs = new Set();
   S.vLang = null;
+  S.condBranch = 'both';
   S.approvalComments = [];
   S.approvalDoneByLang = {};
   S.approvalActivity = [];
@@ -5029,6 +5246,34 @@ function findLiquidMergeEnd(str, i){
   return j;
 }
 
+// Protege trechos que NÃO podem ter o apóstrofo mexido: tags Liquid inteiras ({% %} / {{ }},
+// incluindo os delimitadores de string usados dentro delas como 'cb48'/'Digital'), colchetes,
+// blocos %...%, atributos alt=""/title="" e qualquer outra tag HTML, e entidades (&nbsp; etc).
+// Passado pela pessoa que cuida da validação do Braze — um apóstrofo reto (') dentro de uma
+// dessas regiões quebra a sintaxe (ex: vira o delimitador de fim de string do Liquid).
+// Nota: a alternativa original do apóstrofo solto ('.*?(\}|%)\}+, sem exigir { ou {{
+// antes) foi removida — ela era gulosa demais e podia esticar do primeiro apóstrofo de
+// texto REAL até qualquer "}" ou "%}" bem mais adiante na mesma célula (ex: um Liquid
+// mais à frente), engolindo o texto real inteiro no meio como se fosse protegido.
+const APOSTROPHE_PROTECT_RE = /\{%.*?%\}|\{(\{|%).*?('cb\d+'|'Digital'|'[^']*'|(\}|%)\}+)|\[.*?\]|%{1,2}.*?%{1,2}|<[^>]+>|&[a-zA-Z#0-9]+;/gm;
+
+// Troca apóstrofo reto (') por curly apostrophe (’, alt+0146 / U+2019) só no texto de
+// verdade — qualquer trecho que bata no APOSTROPHE_PROTECT_RE fica intocado, pra não
+// corromper sintaxe Liquid/HTML.
+function curlifyApostrophes(str){
+  if(!str) return str;
+  const re = new RegExp(APOSTROPHE_PROTECT_RE.source, APOSTROPHE_PROTECT_RE.flags);
+  let out = '', lastIndex = 0, m;
+  while((m = re.exec(str)) !== null){
+    out += str.slice(lastIndex, m.index).replace(/'/g, '’');
+    out += m[0];
+    lastIndex = m.index + m[0].length;
+    if(m[0].length === 0) re.lastIndex++; // evita loop infinito em match vazio
+  }
+  out += str.slice(lastIndex).replace(/'/g, '’');
+  return out;
+}
+
 // Remove todos os tokens {{ }} e {% %} do texto, devolvendo só o conteúdo textual.
 function stripLiquid(str){
   let out='', i=0;
@@ -5177,7 +5422,7 @@ function buildCsvStringForSave() {
     esc(S.csv.name) + ',' + emptyCols,
     ',' + esc('Translation tags') + ',' + langs.map(l=>toBrazeLang(l)).join(','),
     ...S.csv.rows.map(r =>
-      r.id + ',' + esc(csvSourceText(r)) + ',' + langs.map(l=>esc(r.translations[l]||'')).join(',')
+      r.id + ',' + esc(curlifyApostrophes(csvSourceText(r))) + ',' + langs.map(l=>esc(curlifyApostrophes(r.translations[l]||''))).join(',')
     )
   ];
   return '\uFEFF' + lines.join('\n');
@@ -5362,7 +5607,7 @@ function restoreProjectContent(data, readOnly) {
   (function reAddMissingImages(){
     if(!S.rawHtml) return;
     const already = new Set(S.strings.filter(s => s.isImg).map(s => s.src));
-    const tokens = S.rawHtml.split(/(<[^>]*>|<!--[\s\S]*?-->)/g);
+    const tokens = S.rawHtml.split(/(<!--[\s\S]*?-->|<[^>]*>)/g);
     let idSeed = S.strings.length + 1;
     for(const tok of tokens){
       if(!/^<img[\s>]/i.test(tok)) continue;
@@ -5471,7 +5716,15 @@ function isIgnoredContextField(val) {
 }
 function isRecognizedMergeTag(val) {
   if(isIgnoredContextField(val)) return false;
-  return /\{\{\s*(?:custom_attribute|context|event_properties|recipient)\s*\./.test(val);
+  if(/\{\{\s*(?:custom_attribute|context|event_properties|recipient)\s*\./.test(val)) return true;
+  // Uma tag "solta" tipo {{ ${first_name} | default: 'Hey' }} — sem namespace, mas COM um
+  // filtro "| default:" — é bem provavelmente um merge tag de negócio de verdade (ex:
+  // personalização de nome), só escrito num atalho sem o prefixo "custom_attribute.". Bem
+  // diferente de uma referência pura de {% assign %} (ex: {{ partner_1_name }}), que quase
+  // nunca vem acompanhada de um "| default:" — a presença do default é o sinal de que isso
+  // é conteúdo real que precisa ficar visível/traduzível, não uma referência interna.
+  if(/\{\{\s*\$\{[^}]+\}\s*\|\s*default\s*:/.test(val)) return true;
+  return false;
 }
 
 // Junta texto misturado com merge tags (context/custom_attribute/etc) numa única string
@@ -5593,7 +5846,13 @@ function extractStr() {
   // uma variável Liquid reatribuída via {% capture %} antes de cada seção, representando
   // logos DIFERENTES de parceiro que só por coincidência têm o mesmo texto de src).
 
-  const tokens = S.rawHtml.split(/(<[^>]*>|<!--[\s\S]*?-->)/g);
+  // {% comment %}...{% endcomment %} é o comentário do PRÓPRIO Liquid (diferente de
+  // <!-- --> do HTML) — usado em templates Braze pra notas internas/documentação
+  // (ex: explicando uma cascata de fallback de parceiro). Sem remover esse bloco
+  // antes de tokenizar, o texto interno parecia conteúdo normal e virava linha
+  // traduzível por engano, mesmo sendo só anotação pra quem mantém o template.
+  const rawForExtraction = S.rawHtml.replace(/\{%[-\s]*comment[-\s]*%\}[\s\S]*?\{%[-\s]*endcomment[-\s]*%\}/gi, '');
+  const tokens = rawForExtraction.split(/(<!--[\s\S]*?-->|<[^>]*>)/g);
 
   for(let ti=0; ti<tokens.length; ti++){
     const tok=tokens[ti];
@@ -5601,6 +5860,17 @@ function extractStr() {
     const isTag=(ti%2===1);
 
     if(isTag){
+      // O "%}" que fecha um {% ... %} aberto num token de TEXTO anterior às vezes cai
+      // dentro do PRÓXIMO token de TAG/comentário (ex: um <!-- --> logo depois da
+      // condição), não no próximo texto — sem checar aqui também, inOpenControlTag
+      // nunca era limpo e ficava travado em true pro resto do documento inteiro,
+      // fazendo TODA extração dali pra frente ser silenciosamente pulada (bug real:
+      // reordenar a regex de comentário deslocou onde um "%}" caía e zerou a
+      // extração de um projeto inteiro).
+      if(inOpenControlTag){
+        if(tok.includes('%}')) inOpenControlTag = false;
+        continue;
+      }
       // "Downlevel-revealed": <!--[if !mso]><!--> ... <!--<![endif]--> — o "<!-->" logo
       // depois do "[if !mso]" fecha o comentário NA HORA pra qualquer cliente que respeita
       // HTML de verdade, revelando o conteúdo entre esse marcador e o fechamento como
@@ -5608,6 +5878,14 @@ function extractStr() {
       // um bloco oculto — sem essa distinção, o conteúdo real dentro dele (ex: o botão de
       // CTA "de verdade", fora do fallback VML só-MSO) nunca virava linha traduzível.
       if(/<!--\[if\s+!mso\]>/i.test(tok)) { continue; }
+      // Um <!--[if mso]>...<![endif]--> inteiro numa linha só agora vira UM token só
+      // (a regex de comentário casa do "<!--" até o "-->" mais próximo, de uma vez).
+      // Sem este caso, ele batia só na checagem de abertura (msoDepth++) logo abaixo e
+      // nunca na de fechamento — o msoDepth ficava preso pra sempre em vez de voltar a
+      // 0, escondendo o resto do documento inteiro da extração (bug real encontrado:
+      // projeto inteiro lido como 0 strings/0 imagens depois de um único <!--[if mso]>
+      // auto-contido). Abre-e-fecha no mesmo token = efeito líquido zero no depth.
+      if(/<!--\[if/i.test(tok) && /<!\[endif\]/i.test(tok)) { continue; }
       if(/<!--\[if/i.test(tok))   { msoDepth++; continue; }
       if(/<!\[endif\]/i.test(tok)){ msoDepth=Math.max(0,msoDepth-1); continue; }
       if(/^<!--/.test(tok)) continue;
@@ -6837,10 +7115,19 @@ function scheduleAutosave() {
 
 // Salva imediatamente (sem esperar o debounce de 600ms) se a pessoa fechar/recarregar
 // a aba enquanto ainda tinha uma edição pendente — evita perder os últimos caracteres digitados.
+// _avAutosaveTimer (comentários/status de aprovação) também precisa desse flush — sem ele,
+// apagar um comentário de aprovação e fechar a aba dentro da janela de 600ms do debounce
+// nunca chegava a salvar, e o comentário "deletado" reaparecia no próximo carregamento
+// (não é ressurreição via sync, é só a edição que nunca foi persistida).
 window.addEventListener('beforeunload', () => {
   if(_autosaveTimer) {
     clearTimeout(_autosaveTimer);
     autosaveProject();
+  }
+  if(_avAutosaveTimer) {
+    clearTimeout(_avAutosaveTimer);
+    if(_campaign) autosaveCampaignApprovalState();
+    else autosaveApprovalState();
   }
 });
 
@@ -7192,6 +7479,57 @@ function renderFooterPlaceholder(html) {
   return html.replace(footerCbRe, FOOTER_PLACEHOLDER_HTML);
 }
 
+// Toggle SÓ de teste/visualização (não muda o HTML tageado, nem o CSV — só o preview em
+// tela): o preview normalmente nunca avalia a condição de um {% if/elsif/else %} de verdade,
+// só mostra os dois lados em sequência com uma etiqueta (annotateConditionals). Isso resolve
+// manualmente cada bloco if/elsif/else/endif (e unless/endunless), escolhendo UM branch —
+// 'if' pega sempre o primeiro (o if/unless), 'else' pega sempre o último (o else, se existir;
+// senão cai pro último elsif; senão cai pro próprio if). Suporta blocos aninhados via recursão.
+function resolveConditionalBranch(html, mode){
+  const TAG_RE = /\{%[-\s]*(if|elsif|else|endif|unless|endunless)\b([^%]*)%\}/gi;
+  const tokens = [];
+  let last = 0, m;
+  while((m = TAG_RE.exec(html))){
+    if(m.index > last) tokens.push({t:'text', v: html.slice(last, m.index)});
+    tokens.push({t:'tag', k: m[1].toLowerCase()});
+    last = m.index + m[0].length;
+  }
+  if(last < html.length) tokens.push({t:'text', v: html.slice(last)});
+
+  let i = 0;
+  // Consome texto (e blocos if/unless aninhados, resolvidos recursivamente) até achar um
+  // token de "parada" (else/elsif/endif/endunless) ou acabarem os tokens — não consome o
+  // token de parada, quem chamou decide o que fazer com ele.
+  function parseSequence(){
+    let out = '';
+    while(i < tokens.length){
+      const tok = tokens[i];
+      if(tok.t === 'text'){ out += tok.v; i++; continue; }
+      if(tok.k === 'if' || tok.k === 'unless'){ i++; out += parseIfBlock(); continue; }
+      return { out, stop: tok.k };
+    }
+    return { out, stop: null };
+  }
+  // Já consumiu o {% if %}/{% unless %} de abertura — resolve até o {% endif/endunless %}
+  // correspondente e devolve só o texto do branch escolhido pelo "mode".
+  function parseIfBlock(){
+    const branches = [];
+    let stop = null;
+    for(;;){
+      const seq = parseSequence();
+      branches.push(seq.out);
+      stop = seq.stop;
+      if(stop === 'elsif' || stop === 'else'){ i++; continue; }
+      break; // endif/endunless, ou acabou sem fechar (HTML malformado) — desiste aqui
+    }
+    if(stop === 'endif' || stop === 'endunless') i++;
+    if(mode === 'if') return branches[0];
+    return branches.length > 1 ? branches[branches.length - 1] : branches[0];
+  }
+
+  return parseSequence().out;
+}
+
 // Substitui {% if %}/{% elsif %}/{% else %}/{% endif %} (e {% unless %}/{% endunless %})
 // por uma tag de texto discreta bem no lugar onde a marcação estava — só a palavra-chave
 // (IF/ELSIF/ELSE/ENDIF/UNLESS/ENDUNLESS), sem a condição nem nenhum texto a mais.
@@ -7273,8 +7611,15 @@ function buildPreviewHtml(lang){
   // Step 1: strip any existing Liquid translation tags (from tagged HTML imports)
   html=html.replace(/\{%translation\s+\S+?%\}/g,'').replace(/\{%endtranslation%\}/g,'');
 
+  // {% comment %}...{% endcomment %} é sintaxe do PRÓPRIO Liquid, não do HTML — o navegador
+  // não sabe escondê-la sozinho (diferente de um <!-- --> de verdade, que já fica invisível
+  // por conta própria). Sem remover aqui, uma nota interna de quem mantém o template (ex:
+  // documentando uma cascata de fallback) aparecia como texto cru e visível no preview,
+  // mesmo já não indo mais pro CSV (extractStr já ignora esse bloco desde antes).
+  html=html.replace(/\{%[-\s]*comment[-\s]*%\}[\s\S]*?\{%[-\s]*endcomment[-\s]*%\}/gi, '');
+
   html=renderFooterPlaceholder(html);
-  html=annotateConditionals(html);
+  html = (S.condBranch && S.condBranch !== 'both') ? resolveConditionalBranch(html, S.condBranch) : annotateConditionals(html);
   // Strip {% assign partner_X_id = ... %} tags only — purely declarative, never visible
   html=html.replace(/\{%[-\s]*assign\s+partner_\d+_id\s*=[^%]*?%\}/g, '');
 
@@ -7376,9 +7721,9 @@ function buildPreviewHtml(lang){
       // aparece no CSV/grid (row.text — com o "default" já preenchido, ex: "there"), não
       // row.display (que é só o placeholder tipo "{first_name}", usado pro rótulo compacto
       // do grid) — senão o preview mostra um texto diferente do que a pessoa vê no CSV.
-      const displayText = (!isOrig && row.translations[lang])
+      const displayText = curlifyApostrophes((!isOrig && row.translations[lang])
         ? row.translations[lang]
-        : (row.text || row.display || row.src);
+        : (row.text || row.display || row.src));
       html = html.replace(placeholder, `<span data-tid="${row.id}">${displayText}</span>`);
     }
   });
@@ -7601,6 +7946,15 @@ function setVS(sz,btn){
   }
 }
 
+// Toggle SÓ de teste (ver comentário em resolveConditionalBranch) — não mexe em S.csv nem
+// em S.rawHtml, só troca qual branch o PREVIEW mostra. Refaz o preview na hora.
+function setCondBranch(mode, btn){
+  document.querySelectorAll('.cb-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  S.condBranch = mode;
+  refreshViewer();
+}
+
 
 // Diz se a posição "before" (texto até o ponto candidato) está dentro de um <style>/<script>
 // ainda aberto. buildTaggedHtml/buildPreviewHtml fazem busca de texto simples no documento
@@ -7676,9 +8030,12 @@ function buildTaggedHtml() {
     }
     const key = r.isStyle&&r.outerKey ? r.outerKey : r.src;
     if(!key){ missed.push(r); return; }
+    // curlifyApostrophes só no CONTEÚDO inserido — "key" continua com o texto original
+    // exato (precisa bater literalmente com o HTML de origem pra achar a posição certa).
+    const srcCurly = curlifyApostrophes(r.src);
     const replacement = r.isStyle
-      ? `${r.openTag}{%translation ${r.id}%}${r.src}{%endtranslation%}${r.closeTag}`
-      : `{%translation ${r.id}%}${r.src}{%endtranslation%}`;
+      ? `${r.openTag}{%translation ${r.id}%}${srcCurly}{%endtranslation%}${r.closeTag}`
+      : `{%translation ${r.id}%}${srcCurly}{%endtranslation%}`;
     let searchFrom = 0, tagged_ok = false;
     while(searchFrom < tagged.length){
       const pos = tagged.indexOf(key, searchFrom);
