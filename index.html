@@ -826,7 +826,12 @@ td.tl.tl-missing textarea,td.tl.tl-missing input{background:transparent;}
 .av-pin:hover{transform:translate(-50%,-100%) rotate(45deg) scale(1.12);}
 .av-pin.resolved{background:var(--green);}
 .av-pin.hl{outline:3px solid rgba(59,130,246,.6);outline-offset:1px;}
-.av-newpin-box{position:absolute;z-index:10;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px;width:240px;}
+/* position:fixed + z-index acima de #approvalView (8000) de propósito — vive fora do
+   container transformado (#avCanvas tem transform:scale() pro zoom), coordenadas calculadas
+   em JS a partir de getBoundingClientRect() (ver openNewPinBox/onFrameSelection). Abaixo de
+   #mentionDropdown (9998) pra o dropdown de @menção continuar aparecendo por cima quando
+   aberto a partir do textarea desta caixa. */
+.av-newpin-box{position:fixed;z-index:9000;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px;width:240px;}
 .av-newpin-quote{font-size:11px;font-style:italic;color:var(--text2);background:var(--s2);border-left:2.5px solid var(--accent);padding:5px 8px;border-radius:0 6px 6px 0;margin-bottom:7px;max-height:60px;overflow-y:auto;}
 .av-comment-quote{font-size:11px;font-style:italic;color:var(--text2);background:var(--surface);border-left:2.5px solid var(--accent);padding:5px 8px;border-radius:0 6px 6px 0;margin-bottom:6px;}
 .av-edit-btn{font-size:10.5px;font-weight:700;color:var(--text3);background:none;border:none;cursor:pointer;font-family:var(--sans);padding:0;}
@@ -2051,7 +2056,14 @@ let _lockTakeoverShown = false; // evita mostrar o aviso mais de uma vez pra mes
 // do banco e re-renderiza — assim a trava expira sozinha (3min), o "Last edited" atualiza, e
 // travas/aprovações criadas por OUTRA pessoa aparecem aqui mesmo se essa aba já estava aberta
 // antes (sem depender só do realtime, que pode atrasar ou falhar em silêncio).
+// document.hidden: pula o pull/render enquanto a ABA do navegador não está visível (minimizada,
+// outra aba em foco) — ninguém está olhando o Dashboard nesse momento mesmo, então buscar a
+// tabela de projetos inteira a cada 15s seria só tráfego/CPU desperdiçado (pior quanto mais
+// tempo a pessoa deixa a aba aberta em segundo plano, e mais gente/projetos tiver no banco). O
+// listener de 'visibilitychange' logo abaixo garante que, ao voltar pra aba, os dados atualizam
+// na hora em vez de esperar o próximo tick — não fica mais "stale" do que já era antes.
 setInterval(async () => {
+  if(document.hidden) return;
   const dash = document.getElementById('dashboardScreen');
   if(!dash || dash.style.display === 'none') return;
   if(ghConfigured()) await ghPullProjects();
@@ -2060,7 +2072,23 @@ setInterval(async () => {
 
 // Enquanto a pessoa estiver dentro do editor de um projeto, verifica periodicamente
 // se outra pessoa assumiu a edição (trava expirou e alguém abriu antes de você voltar).
-setInterval(checkMyLockTakeover, 20000);
+// Mesmo motivo do document.hidden acima: com a aba em segundo plano ninguém veria o aviso
+// de takeover mesmo, então pular o pull até a aba voltar a ficar visível é só economia.
+setInterval(() => { if(!document.hidden) checkMyLockTakeover(); }, 20000);
+
+// Ao voltar pra esta aba depois de um tempo em segundo plano (ver os dois setInterval acima,
+// que pulam o trabalho enquanto document.hidden), refaz na hora a checagem que ficou pausada —
+// sem isso, dar uma olhada na aba logo após voltar podia mostrar dado com até 15-20s de atraso
+// (a espera normal do próximo tick do poll) em vez de tão fresco quanto antes desta otimização.
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden) return;
+  const dash = document.getElementById('dashboardScreen');
+  if(dash && dash.style.display !== 'none') {
+    if(ghConfigured()) ghPullProjects().then(renderDashboardIfChanged);
+  }
+  const appBody = document.getElementById('appBody');
+  if(appBody && appBody.style.display !== 'none') checkMyLockTakeover();
+});
 
 async function checkMyLockTakeover() {
   if(_lockTakeoverShown || !currentProjectId) return;
@@ -2374,7 +2402,14 @@ function notifGetAll() {
 }
 
 function notifSaveAll(notifs) {
-  localStorage.setItem(NOTIF_KEY, JSON.stringify(notifs));
+  // Mesmo raciocínio do try/catch em projSaveAllLocal: notificações nunca são deletadas (só
+  // acumulam), e sem isso um QuotaExceededError aqui impediria até a linha de baixo
+  // (sbPushNotifs) de rodar — perdendo a notificação local E remota, em silêncio.
+  try {
+    localStorage.setItem(NOTIF_KEY, JSON.stringify(notifs));
+  } catch(e) {
+    console.warn('localStorage (notifications) write failed — quota exceeded? O sync com o Supabase ainda é tentado.', e);
+  }
   sbPushNotifs(notifs); // sincroniza com o Supabase em segundo plano
 }
 
@@ -2792,7 +2827,19 @@ function projGetAll() {
 }
 
 function projSaveAllLocal(projects) {
-  localStorage.setItem(PROJ_KEY, JSON.stringify(projects));
+  // try/catch: localStorage tem uma cota (~5-10MB, varia por navegador) — projetos guardam
+  // e-mail HTML + CSV completos de várias línguas, então um catálogo grande o suficiente pode
+  // estourar essa cota. Sem isso, um QuotaExceededError aqui (setItem) subia sem tratamento e
+  // interrompia a função ANTES da linha seguinte no chamador (ghMergeAndPushProjects, chamado
+  // logo depois em projSaveAll) — ou seja, o autosave falhava por INTEIRO, local E remoto, sem
+  // aviso nenhum pra pessoa. Com o catch, o cache local desta aba fica desatualizado (só isso
+  // já era o pior caso de qualquer erro de rede tratado no resto do arquivo), mas o save
+  // continua e ainda tenta ir pro Supabase — só loga o aviso pra aparecer no console.
+  try {
+    localStorage.setItem(PROJ_KEY, JSON.stringify(projects));
+  } catch(e) {
+    console.warn('localStorage (projects) write failed — quota exceeded? O sync com o Supabase ainda é tentado.', e);
+  }
 }
 
 // Faz merge POR PROJETO (usando updatedAt) contra o que está no localStorage agora, em vez
@@ -2976,9 +3023,17 @@ function setDashFolderFilter(name) {
 }
 
 let _dashProjectSearch = '';
+// Debounced (150ms, mesmo valor usado no autosave de tradução) — renderDashboard() reconstrói
+// o innerHTML inteiro das 3 listas e reparse o CSV de CADA projeto pra calcular o badge de
+// progresso (projTranslationStats -> parseBrazeCsv), além de recriar o <iframe srcdoc> de
+// preview de cada card. Sem o debounce, isso rodava por INTEIRO a cada tecla digitada na
+// busca — o custo cresce com o número de projetos da pessoa, e ficava pior (e mais "piscante",
+// pelos iframes recarregando) quanto mais projetos ela tivesse.
+let _dashSearchTimer = null;
 function setDashProjectSearch(text) {
   _dashProjectSearch = text;
-  renderDashboard();
+  clearTimeout(_dashSearchTimer);
+  _dashSearchTimer = setTimeout(renderDashboard, 150);
 }
 
 // ── Renomear/apagar uma pasta inteira de uma vez — antes só dava pra mover projeto
@@ -3295,7 +3350,36 @@ async function saveCampaignProject() {
   if(ghConfigured()) await ghPullProjects();
   const projects = projGetAll();
   const idx = projects.findIndex(x => x.id === camp.id);
-  if(idx === -1) projects.push(camp); else projects[idx] = camp;
+  if(idx === -1) { projects.push(camp); projSaveAll(projects); return; }
+
+  // Funde o estado de aprovação (comentários/atividade/approvalDoneByLang/tombstones) de CADA
+  // item contra a versão remota recém-puxada, em vez de sobrescrever a campanha inteira de
+  // uma vez (era só "projects[idx] = camp"). Sem isso: duas pessoas comentando em itens
+  // diferentes (ou no MESMO item) da mesma campanha ao mesmo tempo faziam quem salvasse por
+  // último apagar silenciosamente o trabalho da outra — a mesma classe de bug que
+  // autosaveApprovalState/mergeApprovalState já resolve pra projetos avulsos, mas campanhas
+  // nunca tinham essa proteção (só um overwrite direto do objeto inteiro). Dados de
+  // rows/traduções continuam por overwrite direto — essa parte é edição exclusiva do dono,
+  // já protegida pelo lock normal (approvalBlockedByEdit); só o lado de aprovação/comentário,
+  // que várias pessoas mexem ao mesmo tempo de propósito, precisa de merge de verdade.
+  const remoteCamp = projects[idx];
+  const remoteItemsById = new Map((remoteCamp.items || []).map(it => [it.id, it]));
+  camp.items = (camp.items || []).map(localItem => {
+    const remoteItem = remoteItemsById.get(localItem.id);
+    if(!remoteItem) return localItem; // item novo — ninguém mais tem essa versão ainda
+    const { mergedComments, mergedActivity, mergedDoneByLang, mergedDeletedIds } = mergeApprovalState(
+      remoteItem, localItem.approvalComments || [], localItem.approvalActivity || [],
+      localItem.approvalDoneByLang || {}, localItem.approvalDeletedIds || []
+    );
+    return {
+      ...localItem,
+      approvalComments: mergedComments,
+      approvalActivity: mergedActivity,
+      approvalDoneByLang: mergedDoneByLang,
+      approvalDeletedIds: mergedDeletedIds
+    };
+  });
+  projects[idx] = camp;
   projSaveAll(projects);
 }
 
@@ -3546,7 +3630,7 @@ function campBulkCardSize(type) {
 
 function campaignBulkLangCardHtml(item, idx, lang, isOrig) {
   const country = COUNTRIES.find(c => c.lang === lang);
-  const done = item.approvalDoneByLang && item.approvalDoneByLang[lang];
+  const done = isLangApproved(item.approvalDoneByLang, lang);
   const cid = 'campBulkThumb-' + idx + '-' + cssSafeLang(lang);
   const size = campBulkCardSize(item.type);
   return `
@@ -3603,10 +3687,12 @@ function toggleCampaignBulkApprove(idx, lang) {
   const item = _campaign && _campaign.items[idx];
   if(!item) return;
   item.approvalDoneByLang = item.approvalDoneByLang || {};
-  if(item.approvalDoneByLang[lang]) {
-    delete item.approvalDoneByLang[lang];
+  const me = authCurrentUser();
+  // NÃO usa delete pra desfazer — ver comentário em isLangApproved. Mesmo motivo do
+  // undoLangApproval: precisa sobreviver como tombstone com timestamp mais novo.
+  if(isLangApproved(item.approvalDoneByLang, lang)) {
+    item.approvalDoneByLang[lang] = { by: me ? me.email : null, at: Date.now(), undone: true };
   } else {
-    const me = authCurrentUser();
     item.approvalDoneByLang[lang] = { by: me ? me.email : null, at: Date.now() };
   }
   scheduleCampaignAutosave();
@@ -7268,13 +7354,16 @@ function scheduleAutosave() {
   _autosaveTimer = setTimeout(autosaveProject, 150);
 }
 
-// Salva imediatamente (sem esperar o debounce de 600ms) se a pessoa fechar/recarregar
-// a aba enquanto ainda tinha uma edição pendente — evita perder os últimos caracteres digitados.
+// Salva imediatamente (sem esperar o debounce) se a pessoa fechar/recarregar a aba
+// enquanto ainda tinha uma edição pendente — evita perder os últimos caracteres digitados.
 // _avAutosaveTimer (comentários/status de aprovação) também precisa desse flush — sem ele,
 // apagar um comentário de aprovação e fechar a aba dentro da janela de 600ms do debounce
 // nunca chegava a salvar, e o comentário "deletado" reaparecia no próximo carregamento
 // (não é ressurreição via sync, é só a edição que nunca foi persistida).
-window.addEventListener('beforeunload', () => {
+// _campaignAutosaveTimer (edição de tradução de ITEM DE CAMPANHA) faltava aqui até agora —
+// achado real de QA: editar um item de campanha e fechar a aba dentro dos 150ms do debounce
+// perdia a edição, silenciosamente, sem nenhum aviso.
+window.addEventListener('beforeunload', (e) => {
   if(_autosaveTimer) {
     clearTimeout(_autosaveTimer);
     autosaveProject();
@@ -7283,6 +7372,22 @@ window.addEventListener('beforeunload', () => {
     clearTimeout(_avAutosaveTimer);
     if(_campaign) autosaveCampaignApprovalState();
     else autosaveApprovalState();
+  }
+  if(_campaignAutosaveTimer) {
+    clearTimeout(_campaignAutosaveTimer);
+    saveCampaignProject();
+  }
+  // _pendingProjectsPush (ver ghMergeAndPushProjects) fica não-null enquanto o envio pro
+  // Supabase de um save ainda está em voo — isso NÃO é algo que dá pra "esperar terminar"
+  // aqui (navegadores não garantem que uma requisição de rede em andamento complete depois
+  // que a aba começa a fechar). O melhor que dá pra fazer é avisar: se tem um envio ainda
+  // não confirmado (ex: acabou de subir um projeto novo e já foi fechar a aba, ou uma
+  // edição ainda sincronizando), mostra o diálogo nativo do navegador de "tem certeza que
+  // quer sair?" — dá a chance da pessoa esperar mais alguns segundos antes de fechar de
+  // verdade, em vez de perder silenciosamente algo que só existia localmente ainda.
+  if(_pendingProjectsPush) {
+    e.preventDefault();
+    e.returnValue = '';
   }
 });
 
@@ -7306,10 +7411,17 @@ function autosaveProject() {
     p.data.langs = [...S.csv.langs];
     p.data.comments = collectRowComments();
   }
-  p.data.approvalComments = [...S.approvalComments];
-  p.data.approvalDoneByLang = { ...S.approvalDoneByLang };
-  p.data.approvalActivity = [...S.approvalActivity];
-  p.data.approvalDeletedIds = [...S.approvalDeletedIds];
+  // NÃO grava approvalComments/approvalDoneByLang/approvalActivity/approvalDeletedIds aqui.
+  // Essa função salva a cada tecla digitada numa tradução (scheduleAutosave, 150ms) e lê
+  // projGetAll() LOCAL — sem pull nem merge — antes de escrever. Editar tradução nunca muda
+  // esses 4 campos (só ações de aprovação mudam, e essas SEMPRE passam por
+  // autosaveApprovalState()/autosaveCampaignApprovalState(), que fazem pull+merge de
+  // verdade via mergeApprovalState). Se esta função também os escrevesse, qualquer edição de
+  // tradução feita DEPOIS de um approver comentar/verificar/aprovar sobrescrevia esses campos
+  // com a cópia velha de S (desatualizada desde a abertura do projeto), e
+  // mergeProjectsForSave funde por PROJETO INTEIRO usando updatedAt — como esta escrita seta
+  // um updatedAt mais novo, ela vencia e apagava silenciosamente comentários/aprovações de
+  // outra pessoa. Bug real, achado por QA de concorrência.
   if(!_approverMode) {
     p.lockedBy = me.email;
     p.lockedAt = Date.now();
@@ -7336,13 +7448,29 @@ function scheduleApprovalAutosave() {
   _avAutosaveTimer = setTimeout(autosaveApprovalState, 600);
 }
 
-function autosaveCampaignApprovalState() {
+async function autosaveCampaignApprovalState() {
   if(!_campaign) return;
+  const itemIndexAtCallTime = _campaignItemIndex; // ver comentário abaixo sobre trocar de item no meio do await
   commitCampaignItemApprovalState();
-  saveCampaignProject();
+  await saveCampaignProject();
+  // saveCampaignProject() agora funde o item ativo contra o remoto (ver comentário lá) —
+  // sincroniza esse resultado de volta pro S, senão esta aba só vai refletir comentários/
+  // aprovações que outra pessoa fez enquanto eu não olhava na PRÓXIMA vez que reabrir o
+  // item, e não agora. Só faz sentido se a pessoa ainda está no MESMO item depois do
+  // await — se ela trocou de item enquanto salvava, S já foi reaproveitado pro item novo.
+  if(_campaign && _campaignItemIndex === itemIndexAtCallTime) {
+    const item = _campaign.items[_campaignItemIndex];
+    if(item) {
+      S.approvalComments = [...(item.approvalComments || [])];
+      S.approvalActivity = [...(item.approvalActivity || [])];
+      S.approvalDoneByLang = { ...(item.approvalDoneByLang || {}) };
+      S.approvalDeletedIds = [...(item.approvalDeletedIds || [])];
+    }
+  }
   if(document.getElementById('approvalView')?.classList.contains('show')) {
+    // renderApprovalSidebar() já chama renderApprovalDoneBanner() internamente no fim
+    // (ver definição) — chamar nos dois lugares só refazia o mesmo innerHTML 2x à toa.
     renderApprovalSidebar();
-    renderApprovalDoneBanner();
     renderApprovalActivityFeed();
     approvalLangs().langs.forEach(l => renderApprovalPins(l));
   }
@@ -7359,6 +7487,29 @@ function mergeApprovalState(remoteData, localComments, localActivity, localDoneB
   // logo abaixo de ressuscitar um comentário que alguém excluiu.
   const mergedDeletedIds = [...new Set([...remoteDeletedIds, ...localDeletedIds])];
   const deletedSet = new Set(mergedDeletedIds);
+
+  // Cascata: se um comentário-PAI foi apagado, qualquer resposta dele também precisa contar
+  // como apagada — mesmo que só tenha chegado de outra sessão DEPOIS do check local de "esse
+  // comentário ainda tem resposta?" em deleteApprovalComment (que só olha o array local, não
+  // o que outra pessoa acabou de responder). Sem isso, a resposta virava uma ORFÃ: sobrevivia
+  // ao merge (só o pai estava tombstoned, não ela), mas nunca mais aparecia em lugar nenhum
+  // (a sidebar só itera comentários de nível raiz) nem tinha como ser apagada pela interface
+  // (o botão de apagar de uma resposta só existe dentro do card do pai, que já não existe) —
+  // ficava presa em S.approvalComments/p.data pra sempre, um dado morto e inacessível. Repete
+  // em loop porque uma resposta apagada em cascata pode ela mesma ser pai de outra resposta
+  // (respostas-de-respostas, se algum dia isso existir).
+  const allCandidates = [...remoteComments, ...localComments];
+  let cascaded = true;
+  while(cascaded) {
+    cascaded = false;
+    allCandidates.forEach(c => {
+      if(c.parentId && deletedSet.has(c.parentId) && !deletedSet.has(c.id)) {
+        deletedSet.add(c.id);
+        mergedDeletedIds.push(c.id);
+        cascaded = true;
+      }
+    });
+  }
 
   // Comentários: união por id (exceto os apagados); se o mesmo id existe dos dois
   // lados (ex: eu marquei "resolved" localmente enquanto o servidor já tinha uma
@@ -7393,6 +7544,19 @@ function mergeApprovalState(remoteData, localComments, localActivity, localDoneB
   return { mergedComments, mergedActivity, mergedDoneByLang, mergedDeletedIds };
 }
 
+// Diz se um idioma está de fato aprovado — NUNCA leia `doneByLang[lang]` como booleano direto
+// em código novo, use isso. Motivo: undoLangApproval/toggleCampaignBulkApprove não apagam mais
+// a chave ao desfazer uma aprovação (ver comentário lá) — em vez disso, gravam
+// {by, at, undone:true} por cima, um tombstone com timestamp. Isso é necessário pro merge
+// concorrente acima (mergeApprovalState) conseguir saber que um "undo" é mais recente que uma
+// aprovação antiga vinda de outra aba/pessoa — SE a chave fosse simplesmente apagada, ficaria
+// indistinguível de "esse idioma nunca foi tocado", e o merge (que só compara timestamps de
+// chaves PRESENTES) ressuscitava a aprovação antiga no autosave seguinte.
+function isLangApproved(doneByLang, lang) {
+  const entry = doneByLang && doneByLang[lang];
+  return !!(entry && !entry.undone);
+}
+
 async function autosaveApprovalState() {
   if(!currentProjectId) return;
   const me = authCurrentUser();
@@ -7425,8 +7589,8 @@ async function autosaveApprovalState() {
 
   // Re-renderiza pra refletir o que veio do merge (ex: comentário de outra pessoa).
   if(document.getElementById('approvalView')?.classList.contains('show')) {
+    // renderApprovalSidebar() já chama renderApprovalDoneBanner() internamente no fim.
     renderApprovalSidebar();
-    renderApprovalDoneBanner();
     renderApprovalActivityFeed();
     approvalLangs().langs.forEach(l => renderApprovalPins(l));
   }
@@ -7454,14 +7618,17 @@ function warnApprovalBlockedByEdit() {
 
 // Se alguém abre a Approval View e, enquanto está lá dentro, o dono começa a editar,
 // a checagem em approverOpenProject (feita só na ENTRADA) não pega esse caso — por
-// isso o realtime (sbOnProjectsChanged) também fecha qualquer composer aberto e avisa.
+// isso o realtime (sbOnProjectsChanged) também avisa aqui. NÃO fecha mais nenhum composer
+// aberto (closeNewPinBox apagava o <textarea>, destruindo silenciosamente um comentário
+// ainda não enviado se essa checagem rodasse bem no meio da pessoa digitando — achado real
+// de QA de concorrência). submitNewPin() já rejeita o "Post" enquanto bloqueado, sem apagar
+// o texto — a pessoa só não consegue enviar até o dono terminar de editar.
 let _editLockWarnedInApproval = false;
 function checkApprovalEditLockLive() {
   if(!document.getElementById('approvalView')?.classList.contains('show')) { _editLockWarnedInApproval = false; return; }
   if(approvalBlockedByEdit()) {
     if(!_editLockWarnedInApproval) {
       _editLockWarnedInApproval = true;
-      closeNewPinBox();
       warnApprovalBlockedByEdit();
     }
   } else {
@@ -8666,8 +8833,8 @@ function openApprovalView() {
   const sub = document.getElementById('avSubtitle');
   if(sub) sub.textContent = S.csv.name || '';
   renderApprovalGrid();
+  // renderApprovalSidebar() já chama renderApprovalDoneBanner() internamente no fim.
   renderApprovalSidebar();
-  renderApprovalDoneBanner();
   renderApprovalActivityFeed();
   avPresenceJoin();
 }
@@ -9079,7 +9246,7 @@ function setApprovalCondBranch(mode) {
 function renderFrameApproveSlot(lang) {
   const el = document.getElementById('avApproveSlot-' + cssSafeLang(lang));
   if(!el) return;
-  const done = S.approvalDoneByLang[lang];
+  const done = isLangApproved(S.approvalDoneByLang, lang);
   el.innerHTML = done
     ? `<button class="av-frame-approved-btn" disabled>
          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
@@ -9197,17 +9364,20 @@ let _pendingPin = null;
 function onFrameSelection(data) {
   const origLang = S.allC.find(c => c.code === S.origin)?.lang;
   if(data.lang === origLang) return; // origem é só referência — não dá pra comentar nem editar nela
-  if(S.approvalDoneByLang[data.lang]) return; // comentários ficam travados enquanto ESSE idioma estiver aprovado
+  if(isLangApproved(S.approvalDoneByLang, data.lang)) return; // comentários ficam travados enquanto ESSE idioma estiver aprovado
   if(approvalBlockedByEdit()) { warnApprovalBlockedByEdit(); return; }
   const vp = document.getElementById('avVp-' + cssSafeLang(data.lang));
   if(!vp) return;
   const rect = vp.getBoundingClientRect();
-  const x = rect.width * (data.xPct / 100);
-  const y = rect.height * (data.yPct / 100);
+  // Coordenadas de TELA de verdade (getBoundingClientRect já reflete o zoom/transform atual do
+  // canvas) — não mais coordenadas locais de vp. A caixa agora é position:fixed (ver
+  // openNewPinBox), então precisa da posição real na tela, somando rect.left/top.
+  const screenX = rect.left + rect.width * (data.xPct / 100);
+  const screenY = rect.top + rect.height * (data.yPct / 100);
   // Selecionar só precisa apontar QUAL linha — a citação mostrada e o botão de editar sempre
   // trabalham com a linha INTEIRA, não só o pedacinho de texto que a pessoa arrastou o mouse por cima.
   const quote = data.rowId ? currentRowText(data.rowId, data.lang) : data.text;
-  openNewPinBox(vp, x, y, data.xPct, data.yPct, data.lang, quote, data.rowId);
+  openNewPinBox(vp, screenX, screenY, data.xPct, data.yPct, data.lang, quote, data.rowId);
 }
 
 // Texto atual de uma linha, num idioma: a tradução se já existir, senão o texto de origem
@@ -9220,14 +9390,24 @@ function currentRowText(rowId, lang) {
   return isOrig ? row.src : (row.translations[lang] || row.src || '');
 }
 
-function openNewPinBox(vp, x, y, xPct, yPct, lang, quote, rowId) {
+function openNewPinBox(vp, screenX, screenY, xPct, yPct, lang, quote, rowId) {
   closeNewPinBox();
   _pendingPin = { lang, xPct, yPct, quote: quote || '', rowId: rowId || null };
   const box = document.createElement('div');
   box.className = 'av-newpin-box';
   box.id = 'avNewPinBox';
-  box.style.left = Math.max(4, x) + 'px';
-  box.style.top = (y + 12) + 'px';
+  // position:fixed com coordenadas de TELA (ver CSS .av-newpin-box) — não mais position:
+  // absolute relativo a vp. vp vive dentro de #avCanvas, que tem transform:scale() aplicado
+  // pro zoom (ver applyAvTransform) — um left/top em px num descendente de um ancestral com
+  // scale() é resolvido no espaço de coordenadas LOCAL (pré-transform) daquele ancestral, mas
+  // screenX/screenY vêm de getBoundingClientRect() (espaço de TELA, pós-transform). Em zoom
+  // 100% os dois espaços coincidem por acaso, mas quanto mais zoom, maior o descompasso — a
+  // caixa abria cada vez mais longe do ponto clicado de verdade, na proporção do zoom (esse
+  // era o bug: "quando o zoom tá muito próximo, o box abre meio distante da seleção").
+  // position:fixed + coordenadas de tela elimina esse descompasso — a caixa sempre abre bem
+  // ao lado de onde a pessoa selecionou, em qualquer nível de zoom.
+  box.style.left = Math.max(4, screenX) + 'px';
+  box.style.top = (screenY + 12) + 'px';
   const esc = s => String(s || '').replace(/</g, '&lt;');
   // Mesma estrutura dos outros comentários do app (thread do CSV builder e sidebar da Approval
   // View): linha textarea+botão lado a lado (.av-reply-input-box), não textarea com uma linha
@@ -9252,17 +9432,11 @@ function openNewPinBox(vp, x, y, xPct, yPct, lang, quote, rowId) {
     </div>
   `;
   box.onclick = e2 => e2.stopPropagation();
-  vp.appendChild(box);
-  // preventScroll: true é ESSENCIAL aqui — #avCanvasViewport tem overflow:hidden, mas isso
-  // não impede o navegador de ajustar seu scrollTop/scrollLeft sozinho pra "revelar" o
-  // elemento que acabou de ganhar foco (overflow:hidden ainda é uma scroll container pra
-  // fins de foco, só não deixa a PESSOA rolar manualmente). O app já faz seu próprio pan/zoom
-  // via transform em #avCanvas — o navegador não sabe disso e calcula a posição do textarea
-  // em coordenadas de layout SEM considerar esse transform, então "acha" que o textarea está
-  // fora da área visível (mesmo quando não está) e força um scroll próprio em cima do pan já
-  // aplicado. Como .av-zoom-controls/.av-hscroll moram no MESMO container (só posicionados
-  // via position:absolute), esse scroll extra arrasta os dois juntos — era isso que fazia a
-  // barra de zoom "subir" sempre que a caixa de comentário ganhava foco.
+  // Body-level de propósito (mesmo padrão do #mentionDropdown) — não é mais filho de vp, que
+  // vive dentro do container transformado (#avCanvas). Isso também é o que elimina o próprio
+  // risco de scroll indesejado ao focar (#avCanvasViewport, com overflow:hidden, não é mais
+  // ancestral deste elemento), mas preventScroll:true continua aqui por segurança/consistência.
+  document.body.appendChild(box);
   setTimeout(() => document.getElementById('avNewPinText')?.focus({preventScroll:true}), 0);
 }
 
@@ -9273,8 +9447,12 @@ function closeNewPinBox() {
 }
 
 function submitNewPin() {
-  if(_pendingPin && S.approvalDoneByLang[_pendingPin.lang]) { closeNewPinBox(); return; }
-  if(approvalBlockedByEdit()) { closeNewPinBox(); warnApprovalBlockedByEdit(); return; }
+  // Nos dois bloqueios abaixo, NÃO fecha a caixa (closeNewPinBox apaga o <textarea> e,
+  // com ele, qualquer texto ainda não enviado, sem chance de recuperação). Só avisa e
+  // mantém a caixa aberta com o texto intacto — se o bloqueio for temporário (dono para
+  // de editar), a pessoa ainda consegue clicar "Post" de novo depois, sem ter perdido nada.
+  if(_pendingPin && isLangApproved(S.approvalDoneByLang, _pendingPin.lang)) { return; }
+  if(approvalBlockedByEdit()) { warnApprovalBlockedByEdit(); return; }
   const ta = document.getElementById('avNewPinText');
   const text = ta ? ta.value.trim() : '';
   if(!text || !_pendingPin) { closeNewPinBox(); return; }
@@ -9358,22 +9536,59 @@ function renderApprovalSidebar() {
   // mora fora daqui (ver HTML), então não é destruído por este innerHTML, mas continuar
   // "aberto" apontando pra uma caixa de resposta que está prestes a sumir ficaria estranho.
   closeMentionDropdown();
+
+  // Preserva uma caixa de RESPOSTA aberta (com texto em digitação) através do rebuild do
+  // innerHTML abaixo. Sem isso: autosaveApprovalState()/autosaveCampaignApprovalState()
+  // chamam esta função ~600ms depois de QUALQUER ação de aprovação (ex: clicar "Verify" num
+  // comentário) — mesmo vindo da MESMA pessoa que, nesse meio-tempo, abriu a caixa de
+  // resposta de OUTRO comentário e começou a digitar. O rebuild reseta toda caixa de resposta
+  // pro estado inicial (display:none, textarea vazio), apagando silenciosamente o texto ainda
+  // não enviado. Achado real de QA de concorrência.
+  let openReplyBox = null;
+  list.querySelectorAll('.av-reply-input-box').forEach(box => {
+    if(box.style.display === 'flex') {
+      openReplyBox = { id: box.id, text: box.querySelector('textarea')?.value || '' };
+    }
+  });
+
   const all = S.approvalComments;
   const topLevel = all.filter(c => !c.parentId).sort((a, b) => b.createdAt - a.createdAt);
+  // Agrupa as respostas por parentId numa única passada por `all` — antes, renderApprovalThreadCard
+  // fazia um all.filter() (varredura completa de TODOS os comentários) pra CADA comentário de
+  // topo, um O(topLevel × all) que cresce em dobro com o total de comentários acumulados no
+  // projeto. Mesmo resultado (mesmo agrupamento, mesma ordenação por createdAt logo abaixo),
+  // só monta o agrupamento uma vez em vez de refazer a varredura por card.
+  const repliesByParent = new Map();
+  all.forEach(r => {
+    if(!r.parentId) return;
+    if(!repliesByParent.has(r.parentId)) repliesByParent.set(r.parentId, []);
+    repliesByParent.get(r.parentId).push(r);
+  });
   if(countEl) countEl.textContent = all.length ? String(all.length) : '';
   list.innerHTML = topLevel.length
-    ? topLevel.map(c => renderApprovalThreadCard(c, all)).join('')
+    ? topLevel.map(c => renderApprovalThreadCard(c, repliesByParent.get(c.id) || [])).join('')
     : `<div class="empty-state" style="margin:6px;padding:24px 16px;"><p>No comments yet. Select any text in a preview to leave one.</p></div>`;
   renderApprovalDoneBanner();
+
+  if(openReplyBox) {
+    const restored = document.getElementById(openReplyBox.id);
+    if(restored) {
+      restored.style.display = 'flex';
+      const ta = restored.querySelector('textarea');
+      if(ta) { ta.value = openReplyBox.text; ta.focus({preventScroll:true}); }
+    }
+  }
 }
 
-function renderApprovalThreadCard(c, all) {
+// `replies` chega pré-agrupado por parentId (ver repliesByParent em renderApprovalSidebar) —
+// só falta ordenar (mesmo critério de sempre: mais antiga primeiro).
+function renderApprovalThreadCard(c, replies) {
   const me = authCurrentUser();
   const isAuthor = !!(me && c.author.toLowerCase() === me.email.toLowerCase());
   const isOwner = isCurrentProjectOwner();
   const resolved = c.resolvedBy && c.resolvedBy.length > 0;
   const iVerified = !!(me && c.resolvedBy.includes(me.email.toLowerCase()));
-  const replies = all.filter(r => r.parentId === c.id).sort((a, b) => a.createdAt - b.createdAt);
+  replies = replies.slice().sort((a, b) => a.createdAt - b.createdAt);
   const verifyBtn = !isAuthor
     ? `<button class="av-verify-btn ${iVerified ? 'checked' : ''}" onclick="event.stopPropagation();toggleApprovalVerify('${c.id}')">✓ ${iVerified ? 'Verified' : 'Verify'}</button>`
     : '';
@@ -9396,13 +9611,13 @@ function renderApprovalThreadCard(c, all) {
       ${quoteHtml}
       <div class="av-comment-text">${formatCommentText(c.text)}</div>
       <div class="av-comment-actions">
-        ${!S.approvalDoneByLang[c.lang] ? `<button class="av-reply-btn" onclick="event.stopPropagation();toggleApprovalReplyBox('${c.id}')">Reply</button>` : ''}
+        ${!isLangApproved(S.approvalDoneByLang, c.lang) ? `<button class="av-reply-btn" onclick="event.stopPropagation();toggleApprovalReplyBox('${c.id}')">Reply</button>` : ''}
         ${editBtn}
         ${verifyBtn}
       </div>
       ${verifiedLine}
       ${replies.map(r => renderApprovalReplyCard(r)).join('')}
-      ${!S.approvalDoneByLang[c.lang] ? `
+      ${!isLangApproved(S.approvalDoneByLang, c.lang) ? `
       <div id="avReplyBox-${c.id}" class="av-reply-input-box" style="display:none;" onclick="event.stopPropagation()">
         <textarea placeholder="Reply… type @ to mention someone" oninput="handleMentionInput(event)" onkeydown="handleMentionKeydown(event)"></textarea>
         <button class="btn-go" style="padding:6px 10px;font-size:11px;" onclick="event.stopPropagation();postApprovalReply('${c.id}', this)">Send</button>
@@ -9460,7 +9675,7 @@ function deleteApprovalComment(id) {
 
 function toggleApprovalReplyBox(id) {
   const c = S.approvalComments.find(x => x.id === id);
-  if(c && S.approvalDoneByLang[c.lang]) return; // comentários ficam travados enquanto ESSE idioma estiver aprovado
+  if(c && isLangApproved(S.approvalDoneByLang, c.lang)) return; // comentários ficam travados enquanto ESSE idioma estiver aprovado
   document.querySelectorAll('.av-reply-input-box').forEach(b => { if(b.id !== 'avReplyBox-' + id) b.style.display = 'none'; });
   const box = document.getElementById('avReplyBox-' + id);
   if(!box) return;
@@ -9478,7 +9693,7 @@ function postApprovalReply(parentId, btn) {
   const text = ta ? ta.value.trim() : '';
   if(!text) return;
   const parent = S.approvalComments.find(c => c.id === parentId);
-  if(!parent || S.approvalDoneByLang[parent.lang]) return;
+  if(!parent || isLangApproved(S.approvalDoneByLang, parent.lang)) return;
   if(!addApprovalComment(parent.lang, null, null, text, parentId)) return;
   renderApprovalSidebar();
 }
@@ -9535,7 +9750,7 @@ function renderApprovalDoneBanner() {
   const el = document.getElementById('avDoneBanner');
   if(!el) return;
   const { langs } = approvalLangs();
-  const approved = langs.filter(l => S.approvalDoneByLang[l]);
+  const approved = langs.filter(l => isLangApproved(S.approvalDoneByLang, l));
   if(!approved.length) { el.innerHTML = ''; return; }
   const allDone = approved.length === langs.length;
   el.innerHTML = `<div class="av-done-banner">✓ ${approved.length} of ${langs.length} language${langs.length===1?'':'s'} approved${allDone ? ' — all done!' : ''}</div>`;
@@ -9563,9 +9778,8 @@ function markLangApproved(lang) {
   S.approvalDoneByLang[lang] = { by: me.email, at: Date.now() };
   logApprovalActivity('approved', lang, null);
   renderFrameApproveSlot(lang);
-  renderApprovalDoneBanner();
   renderApprovalActivityFeed();
-  renderApprovalSidebar();
+  renderApprovalSidebar(); // já chama renderApprovalDoneBanner() internamente no fim
   closeNewPinBox();
   scheduleApprovalAutosave();
   if(p && p.owner && p.owner.toLowerCase() !== me.email.toLowerCase()) {
@@ -9581,12 +9795,14 @@ function undoLangApproval(lang) {
   if(approvalBlockedByEdit()) { warnApprovalBlockedByEdit(); return; }
   const p = projGetAll().find(x => x.id === currentProjectId);
   const projectName = (p && p.name) || S.csv.name || 'this project';
-  delete S.approvalDoneByLang[lang];
+  // NÃO usa delete aqui — ver comentário em isLangApproved. Apagar a chave faria o merge
+  // concorrente (mergeApprovalState) ressuscitar esta aprovação no autosave seguinte, porque
+  // uma chave ausente é indistinguível de "nunca aprovado".
+  S.approvalDoneByLang[lang] = { by: me.email, at: Date.now(), undone: true };
   logApprovalActivity('undone', lang, null);
   renderFrameApproveSlot(lang);
-  renderApprovalDoneBanner();
   renderApprovalActivityFeed();
-  renderApprovalSidebar();
+  renderApprovalSidebar(); // já chama renderApprovalDoneBanner() internamente no fim
   scheduleApprovalAutosave();
   if(p && p.owner && p.owner.toLowerCase() !== me.email.toLowerCase()) {
     notifAdd(p.owner, me.email, `${me.email} undid the approval on ${langDisplayName(lang)} on "${projectName}" — it needs another look.`, { projectId: currentProjectId });
